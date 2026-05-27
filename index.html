@@ -3355,6 +3355,11 @@ function msIsLocalFile() {
 
 async function initMsal() {
   if (msIsLocalFile()) { updateMsUI(); return; }
+  if (typeof msal === 'undefined') {
+    console.error('MSAL 未載入，請確認網路連線後重新整理');
+    updateMsUI();
+    return;
+  }
   try {
     const config = {
       auth: {
@@ -3368,6 +3373,7 @@ async function initMsal() {
       }
     };
     msalInstance = new msal.PublicClientApplication(config);
+    await msalInstance.initialize();
     const accounts = msalInstance.getAllAccounts();
     if (accounts.length > 0) {
       msAccount = accounts[0];
