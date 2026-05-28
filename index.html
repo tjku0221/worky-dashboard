@@ -17,7 +17,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/dist/browser/msal-browser.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
    Worky Dashboard — Tactile Dark
@@ -3356,7 +3356,8 @@ function msIsLocalFile() {
 async function initMsal() {
   if (msIsLocalFile()) { updateMsUI(); return; }
   if (typeof msal === 'undefined') {
-    console.error('MSAL 未載入，請確認網路連線後重新整理');
+    window._msalInitError = 'MSAL 函式庫未載入（CDN 無法存取）';
+    console.error(window._msalInitError);
     updateMsUI();
     return;
   }
@@ -3380,7 +3381,9 @@ async function initMsal() {
       await msAcquireTokenSilent();
     }
   } catch (e) {
+    window._msalInitError = e.message || String(e);
     console.error('MSAL 初始化失敗：', e);
+    msalInstance = null;
   }
   updateMsUI();
 }
@@ -3391,7 +3394,8 @@ async function msLogin() {
     return;
   }
   if (!msalInstance) {
-    alert('Microsoft 驗證未初始化，請重新整理頁面後再試。');
+    const hint = window._msalInitError ? `\n\n錯誤：${window._msalInitError}` : '';
+    alert('Microsoft 驗證未初始化，請重新整理頁面後再試。' + hint);
     return;
   }
   try {
