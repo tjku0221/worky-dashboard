@@ -17,7 +17,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.3/dist/browser/msal-browser.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
 <style>
 /* ═══════════════════════════════════════════════════════════════════════════
    Worky Dashboard — Tactile Dark
@@ -3356,8 +3356,7 @@ function msIsLocalFile() {
 async function initMsal() {
   if (msIsLocalFile()) { updateMsUI(); return; }
   if (typeof msal === 'undefined') {
-    window._msalInitError = 'MSAL 函式庫未載入（CDN 無法存取）';
-    console.error(window._msalInitError);
+    window._msalInitError = '[步驟0] MSAL 未載入（CDN 無法存取）';
     updateMsUI();
     return;
   }
@@ -3374,16 +3373,25 @@ async function initMsal() {
       }
     };
     msalInstance = new msal.PublicClientApplication(config);
+  } catch (e) {
+    window._msalInitError = '[步驟1] PublicClientApplication 建立失敗：' + (e.message || e);
+    msalInstance = null;
+    updateMsUI();
+    return;
+  }
+  try {
     await msalInstance.initialize();
+  } catch (e) {
+    window._msalInitError = '[步驟2] initialize() 失敗：' + (e.message || e);
+  }
+  try {
     const accounts = msalInstance.getAllAccounts();
     if (accounts.length > 0) {
       msAccount = accounts[0];
       await msAcquireTokenSilent();
     }
   } catch (e) {
-    window._msalInitError = e.message || String(e);
-    console.error('MSAL 初始化失敗：', e);
-    msalInstance = null;
+    console.warn('getAllAccounts 失敗（非致命）:', e);
   }
   updateMsUI();
 }
