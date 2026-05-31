@@ -224,7 +224,11 @@ body::after {
   box-shadow: 0 1px 0 rgba(255,255,255,0.04);
 }
 
-.sidebar-nav { padding: 10px 12px; flex: 1; position: relative; z-index: 1; }
+.sidebar-nav { padding: 10px 12px; flex: 1 1 0; min-height: 0; overflow-y: auto; position: relative; z-index: 1; }
+.sidebar-nav::-webkit-scrollbar { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
+.sidebar-nav:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); }
 
 .sidebar-section-title {
   font-size: 10px;
@@ -1034,17 +1038,26 @@ body::after {
 .chk-th, .chk-td { width: 46px; text-align: center; padding-left: 12px !important; padding-right: 8px !important; }
 input[type="checkbox"] {
   appearance: none;
-  width: 16px; height: 16px;
+  width: 17px; height: 17px;
   border-radius: 5px;
-  background: linear-gradient(180deg, var(--well-top), var(--well-bot));
+  background: linear-gradient(180deg, #2a3146, #1a2030);
   box-shadow:
-    inset 0 1px 2px rgba(0,0,0,0.7),
-    inset 0 -1px 0 rgba(255,255,255,0.04),
-    0 1px 0 rgba(255,255,255,0.05);
+    inset 0 1px 0 rgba(255,255,255,0.12),
+    inset 0 -1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(255,255,255,0.14),
+    0 1px 2px rgba(0,0,0,0.4);
   cursor: pointer;
   position: relative;
   vertical-align: middle;
   transition: background 0.15s, box-shadow 0.15s;
+}
+input[type="checkbox"]:hover {
+  background: linear-gradient(180deg, #333c54, #222a3c);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    inset 0 -1px 2px rgba(0,0,0,0.5),
+    0 0 0 1px rgba(255,255,255,0.22),
+    0 0 8px rgba(255,255,255,0.06);
 }
 input[type="checkbox"]:checked {
   background: linear-gradient(180deg, var(--accent-top-hi), var(--accent-top));
@@ -1776,51 +1789,168 @@ input[type="checkbox"]:indeterminate::after {
 .date-popover-foot .btn { flex: 1; padding: 6px 10px; font-size: 11.5px; }
 
 /* ── Microsoft 登入區塊 ────────────────────────────────── */
-.ms-section {
-  padding: 12px 4px 14px;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  margin-top: 4px;
-}
+/* ── Topbar action cluster: clock | plugin | Microsoft ─────────────── */
+.topbar-actions { display: flex; align-items: center; gap: 12px; }
+.topbar-sep { width: 1px; height: 28px; background: var(--well-bot); box-shadow: 1px 0 0 rgba(255,255,255,0.04); }
+
+/* Microsoft — top right */
+.ms-top { position: relative; }
 .ms-btn {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  width: 100%;
-  padding: 8px 12px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px 7px 11px;
   background: rgba(0,120,212,0.12);
-  border: 1px solid rgba(0,120,212,0.28);
-  border-radius: var(--r-sm);
-  color: #5aabff;
+  border: 1px solid rgba(0,120,212,0.30);
+  border-radius: var(--r-pill);
+  color: #7ab8ff;
   font-size: 12px; font-weight: 600;
   cursor: pointer;
+  transition: background .15s, box-shadow .15s;
+  box-shadow: inset 0 1px 0 rgba(120,180,255,0.10);
+}
+.ms-btn:hover { background: rgba(0,120,212,0.22); box-shadow: inset 0 1px 0 rgba(120,180,255,0.18), 0 0 14px rgba(0,120,212,0.25); }
+.ms-avatar-btn {
+  position: relative;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,120,212,0.40);
+  background: rgba(0,120,212,0.16);
+  color: #cfe4ff;
+  font-size: 13px; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 1px 0 rgba(120,180,255,0.15), 0 2px 8px rgba(0,0,0,0.4);
+  transition: box-shadow .15s;
+}
+.ms-avatar-btn:hover { box-shadow: inset 0 1px 0 rgba(120,180,255,0.25), 0 0 14px rgba(0,120,212,0.35); }
+.ms-avatar-btn .ms-dot {
+  position: absolute; right: -1px; bottom: -1px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--green); border: 2px solid var(--raised-bot);
+  box-shadow: 0 0 6px var(--green-glow);
+}
+.ms-logout-pop {
+  position: absolute; top: 42px; right: 0;
+  white-space: nowrap;
+  font-size: 12px; color: #cfe4ff;
+  background: linear-gradient(180deg, var(--raised-top), var(--raised-bot));
+  border: 1px solid rgba(0,120,212,0.30);
+  border-radius: var(--r-sm);
+  padding: 7px 14px;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.6), inset 0 1px 0 var(--edge-hi);
+  display: none;
+  z-index: 50;
+}
+.ms-top:hover .ms-logout-pop { display: block; }
+.ms-logout-pop:hover { color: #fff; }
+
+/* ── Data source hub (collapsed row + expandable detail) ───────────── */
+.src-hub {
+  background: linear-gradient(180deg, var(--well-top), var(--well-bot));
+  border-radius: var(--r-md);
+  box-shadow:
+    inset 0 2px 5px rgba(0,0,0,0.6),
+    inset 0 -1px 0 rgba(255,255,255,0.04),
+    0 1px 0 rgba(255,255,255,0.05);
+  padding: 8px;
+}
+/* two-segment action row: 報表下載 | 重新整理 */
+.src-acts {
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: linear-gradient(180deg, #04050a, #090b12);
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.03);
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.src-act {
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 4px;
+  border: none; cursor: pointer; background: transparent;
+  font-family: inherit;
   transition: background .15s;
 }
-.ms-btn:hover { background: rgba(0,120,212,0.22); }
-.ms-user-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 4px 0 6px;
-}
-.ms-avatar {
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: rgba(0,120,212,0.25);
+.src-act + .src-act { border-left: 1px solid rgba(255,255,255,0.05); box-shadow: -1px 0 0 rgba(0,0,0,0.4); }
+.src-act:hover { background: rgba(255,255,255,0.03); }
+.src-act:active { background: rgba(255,255,255,0.015); }
+.src-act .sa-ic {
+  width: 22px; height: 22px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700; color: #5aabff;
-  flex-shrink: 0;
+  flex-shrink: 0; overflow: hidden;
 }
-.ms-user-name {
-  flex: 1;
-  font-size: 12px; color: var(--t2);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.src-act .sa-ic.plugin {
+  border: 1px solid rgba(244,197,118,0.42);
+  box-shadow: 0 0 8px var(--gold-glow), inset 0 1px 0 rgba(255,210,130,0.2);
 }
-.ms-logout-btn {
-  font-size: 11px; color: var(--t3);
-  background: none; border: none; cursor: pointer;
-  padding: 2px 6px; border-radius: 4px;
-  transition: color .15s;
+.src-act .sa-ic.plugin img { width: 22px; height: 22px; border-radius: 50%; display: block; }
+.src-act .sa-ic.reload {
+  color: var(--t2);
+  background: linear-gradient(180deg, var(--raised-top), var(--raised-bot));
+  box-shadow: inset 0 1px 0 var(--edge-hi), inset 0 -1px 0 var(--edge-lo), 0 1px 4px rgba(0,0,0,0.4);
 }
-.ms-logout-btn:hover { color: var(--t2); }
-.ms-status-hint {
-  font-size: 10.5px; color: var(--t3); padding: 2px 0 2px;
+.src-act .sa-ic.reload svg { width: 12px; height: 12px; }
+.src-act:hover .sa-ic.reload { color: var(--t1); }
+.src-act .sa-ic.spin { animation: pluginspin .8s linear infinite; }
+.src-act .sa-lbl {
+  font-size: 11.5px; font-weight: 600; color: var(--t2); letter-spacing: 0.2px;
+  text-shadow: 0 1px 0 rgba(0,0,0,0.4); white-space: nowrap;
 }
+.src-act:hover .sa-lbl { color: var(--t1); }
+.src-act.disabled { opacity: 0.4; pointer-events: none; }
+@keyframes pluginspin { to { transform: rotate(360deg); } }
+
+/* folder name row */
+.src-row { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 8px; padding: 5px 8px; background: linear-gradient(180deg, #04050a, #090b12); border-radius: var(--r-sm); box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), inset 0 -1px 0 rgba(255,255,255,0.03); }
+.src-row .src-fic { color: var(--gold); flex-shrink: 0; display: flex; filter: drop-shadow(0 0 4px var(--gold-glow)); }
+.src-row.src-empty .src-fic { color: var(--t3); filter: none; }
+.src-name {
+  font-size: 12.5px; font-weight: 500; color: var(--t1);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1;
+}
+.src-row.src-empty .src-name { color: var(--t3); font-weight: 400; }
+.src-mini {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: none; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--t2);
+  background: linear-gradient(180deg, var(--raised-top), var(--raised-bot));
+  box-shadow: inset 0 1px 0 var(--edge-hi), inset 0 -1px 0 var(--edge-lo), 0 1px 0 rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.4);
+  transition: transform .08s, box-shadow .15s, color .15s;
+  padding: 0; overflow: hidden;
+}
+.src-mini:hover { color: var(--t1); }
+.src-mini:active { transform: translateY(1px); }
+.src-mini.plugin {
+  border: 1.5px solid rgba(244,197,118,0.4);
+  box-shadow: inset 0 1px 0 var(--edge-hi), 0 1px 0 rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.4), 0 0 10px var(--gold-glow);
+}
+.src-mini.plugin img { width: 26px; height: 26px; border-radius: 50%; display: block; }
+.src-mini.plugin.spin { animation: pluginspin .8s linear infinite; }
+@keyframes pluginspin { to { transform: rotate(360deg); } }
+.src-led {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: #1a2030; box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
+}
+.src-led.ok { background: radial-gradient(circle at 35% 30%, #86f5b1, #2bb96a); box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 0 8px var(--green-glow); }
+.src-led.partial { background: radial-gradient(circle at 35% 30%, #ffd98a, #d99a2a); box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 0 8px var(--gold-glow); }
+.src-chev {
+  flex-shrink: 0; cursor: pointer; color: var(--accent);
+  display: flex; align-items: center; padding: 2px;
+  transition: transform .25s, color .15s;
+}
+.src-chev:hover { color: #fff; }
+/* collapsed: point down + gentle bob to signal "expandable" */
+.src-hub:not(.open) .src-chev { animation: chevbob 1.6s ease-in-out infinite; }
+@keyframes chevbob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(2px); }
+}
+.src-hub.open .src-chev { transform: rotate(180deg); animation: none; }
+.src-row { cursor: pointer; }
+.src-row:hover { background: linear-gradient(180deg, #07090f, #0c0e16); }
+.src-detail { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.04); }
+.src-hub.open .src-detail { display: block; }
+.src-pick-btn { width: 100%; justify-content: center; margin-bottom: 8px; }
 
 </style>
 </head>
@@ -1881,30 +2011,37 @@ input[type="checkbox"]:indeterminate::after {
     </nav>
 
     <div class="sidebar-uploads">
-      <div class="sidebar-section-title" style="padding:2px 4px 10px">資料來源</div>
+      <!-- hidden stub kept for File System Access JS compatibility -->
+      <div id="folder-section" hidden></div>
 
-      <!-- 指定資料夾（File System Access API） -->
-      <div id="folder-section" hidden>
-        <div id="folder-unset">
-          <button class="btn compact folder-pick-btn" onclick="pickFolder()">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            指定資料夾
+      <div class="src-hub" id="src-hub">
+        <div class="src-acts">
+          <button class="src-act" onclick="launchPlugin()" title="下載最新報表" id="btn-plugin">
+            <span class="sa-ic plugin"><img src="data:image/png;base64,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" alt="Worky 報表小助手"></span>
+            <span class="sa-lbl">報表下載</span>
+          </button>
+          <button class="src-act" onclick="loadFromFolder()" title="重新載入資料夾" id="src-reload">
+            <span class="sa-ic reload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></span>
+            <span class="sa-lbl">重新載入</span>
           </button>
         </div>
-        <div id="folder-set" hidden>
-          <div class="folder-status">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-            <span class="folder-name" id="folder-name-lbl">—</span>
-          </div>
-          <div class="folder-btns">
-            <button class="btn primary compact" onclick="loadFromFolder()">重新載入</button>
-            <button class="btn compact" onclick="pickFolder()">變更</button>
-          </div>
+        <div class="src-row src-empty" id="src-row">
+          <span class="src-fic" onclick="pickFolder()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </span>
+          <span class="src-name" id="src-name" onclick="pickFolder()" title="點擊變更資料夾">尚未指定資料夾</span>
+          <span class="src-led" id="src-led"></span>
+          <span class="src-chev" onclick="toggleSrcDetail()" title="展開明細">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
         </div>
-        <div class="folder-divider"></div>
-      </div>
 
-      <div class="upload-row" id="ui-app" onclick="pick('inp-app')">
+        <div class="src-detail" id="src-detail">
+          <!-- hidden legacy hooks (kept for JS compatibility) -->
+          <div id="folder-unset" hidden></div>
+          <div id="folder-set" hidden><span class="folder-name" id="folder-name-lbl">—</span></div>
+
+          <div class="upload-row" id="ui-app" onclick="pick('inp-app')">
         <svg class="up-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
@@ -1943,30 +2080,8 @@ input[type="checkbox"]:indeterminate::after {
         <div class="led" id="dot-cfg"></div>
         <input type="file" id="inp-cfg" accept=".xlsx,.xls,.zip" hidden onchange="onConfigXLSX(event)">
       </div>
-    </div>
-
-    <!-- Microsoft 帳號 -->
-    <div class="ms-section">
-      <div class="sidebar-section-title" style="padding:0 4px 10px">Microsoft 帳號</div>
-      <div id="ms-not-logged-in">
-        <button class="ms-btn" onclick="msLogin()">
-          <svg width="14" height="14" viewBox="0 0 21 21" fill="none">
-            <rect x="1"  y="1"  width="9" height="9" fill="#f25022"/>
-            <rect x="11" y="1"  width="9" height="9" fill="#7fba00"/>
-            <rect x="1"  y="11" width="9" height="9" fill="#00a4ef"/>
-            <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
-          </svg>
-          登入 Microsoft 帳號
-        </button>
-      </div>
-      <div id="ms-logged-in" hidden>
-        <div class="ms-user-row">
-          <div class="ms-avatar" id="ms-avatar">?</div>
-          <div class="ms-user-name" id="ms-user-name">—</div>
-          <button class="ms-logout-btn" onclick="msLogout()">登出</button>
-        </div>
-        <div class="ms-status-hint">✓ 已可存取 OneDrive / SharePoint</div>
-      </div>
+        </div><!-- /src-detail -->
+      </div><!-- /src-hub -->
     </div>
 
   </aside>
@@ -1980,9 +2095,28 @@ input[type="checkbox"]:indeterminate::after {
         <div class="topbar-sub" id="tb-sub">人力媒合工作台</div>
       </div>
       <div class="topbar-spacer"></div>
-      <div class="topbar-clock">
-        <div class="topbar-clock-time" id="clock-time">--:--:--</div>
-        <div class="topbar-clock-date" id="clock-date">----/--/-- 週-</div>
+      <div class="topbar-actions">
+        <div class="topbar-clock">
+          <div class="topbar-clock-time" id="clock-time">--:--:--</div>
+          <div class="topbar-clock-date" id="clock-date">----/--/-- 週-</div>
+        </div>
+        <div class="topbar-sep"></div>
+        <div class="ms-top">
+          <button class="ms-btn" id="ms-not-logged-in" onclick="msLogin()">
+            <svg width="14" height="14" viewBox="0 0 21 21" fill="none">
+              <rect x="1"  y="1"  width="9" height="9" fill="#f25022"/>
+              <rect x="11" y="1"  width="9" height="9" fill="#7fba00"/>
+              <rect x="1"  y="11" width="9" height="9" fill="#00a4ef"/>
+              <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+            </svg>
+            登入
+          </button>
+          <div id="ms-logged-in" hidden>
+            <button class="ms-avatar-btn" id="ms-avatar" title="Microsoft 帳號">?<span class="ms-dot"></span></button>
+            <div class="ms-logout-pop" onclick="msLogout()">⏻ 登出</div>
+          </div>
+          <span class="ms-user-name" id="ms-user-name" hidden></span>
+        </div>
       </div>
     </header>
 
@@ -2247,6 +2381,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initTweaks();
   initClock();
   initFolder();
+  updateSrcStatus();
   render();
 });
 
@@ -2409,9 +2544,41 @@ async function _idbPut(key, val) {
 }
 
 function _setFolderUI(name) {
-  document.getElementById('folder-unset').hidden = true;
-  document.getElementById('folder-set').hidden = false;
-  document.getElementById('folder-name-lbl').textContent = name;
+  const row = document.getElementById('src-row');
+  const nm  = document.getElementById('src-name');
+  if (row) row.classList.remove('src-empty');
+  if (nm) nm.textContent = name;
+}
+
+function toggleSrcDetail() {
+  document.getElementById('src-hub').classList.toggle('open');
+}
+
+function updateSrcStatus() {
+  const led = document.getElementById('src-led');
+  if (!led) return;
+  const n = (st.apps.length>0?1:0) + (st.orders.length>0?1:0) + (st.merchants.length>0?1:0);
+  led.className = 'src-led' + (n===3 ? ' ok' : n>0 ? ' partial' : '');
+}
+
+function launchPlugin() {
+  const btn = document.getElementById('btn-plugin');
+  const EXT_ID = document.documentElement.dataset.workyExtId || window.WORKY_EXTENSION_ID || '';
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage && EXT_ID) {
+    try {
+      chrome.runtime.sendMessage(EXT_ID, { action: 'open' }, () => {
+        if (chrome.runtime.lastError) {
+          showAlert({ title: '無法啟動報表小助手', body: '請確認已安裝並啟用「Worky 報表小助手」擴充功能。', tone: 'warning' });
+        }
+      });
+      return;
+    } catch (e) {}
+  }
+  showAlert({
+    title: '啟動報表小助手',
+    body: '請點擊瀏覽器右上角的 <b>Worky 報表小助手</b> 圖示開啟，登入後自動下載報表到資料夾。<br><br><span style="color:var(--t3)">（若已設定擴充功能連線，按鈕會直接開啟視窗）</span>',
+    tone: 'info'
+  });
 }
 
 async function initFolder() {
@@ -2536,6 +2703,7 @@ function setDot(id, ok, label) {
   if (d) d.className = 'led'+(ok?' ok':'');
   if (l) l.textContent = label||(ok?'已載入':'未載入');
   if (row) row.classList.toggle('loaded', ok);
+  updateSrcStatus();
 }
 
 function switchTab(tab) {
@@ -3441,8 +3609,11 @@ function updateMsUI() {
     notIn.hidden  = true;
     inEl.hidden   = false;
     const name    = msAccount.name || msAccount.username || '使用者';
-    nameEl.textContent   = name;
-    avatarEl.textContent = name.charAt(0).toUpperCase();
+    if (nameEl) nameEl.textContent = name;
+    if (avatarEl) {
+      avatarEl.firstChild.textContent = name.charAt(0).toUpperCase();
+      avatarEl.title = 'Microsoft：' + name;
+    }
   } else {
     notIn.hidden = false;
     inEl.hidden  = true;
