@@ -2744,12 +2744,10 @@ function computeReviewCount() {
   const storeCol = col('店鋪名稱'), branchCol = col('分店');
   const statusCol = Object.keys(sample).find(h=>h.trim()==='狀態')||col('狀態');
   if (!reviewCol || !endCol) return 0;
-  const tod = today0(); let cnt = 0;
+  let cnt = 0;
   st.orders.forEach(row => {
     if (statusCol && str(row[statusCol])!=='工作結束') return;
     if (str(row[reviewCol])!=='') return;
-    const endDate = parseEndDate(str(row[endCol]));
-    if (!endDate || endDate>=tod) return;
     const storeName=storeCol?str(row[storeCol]):'', branchName=branchCol?str(row[branchCol]):'';
     if (findMerchant(storeName, branchName||storeName)) cnt++;
   });
@@ -3018,18 +3016,16 @@ function renderReviews() {
 
   if (!reviewCol || !endCol) { el.innerHTML=empty('cog','資料欄位不完整','找不到「滿意度」或「工作結束時間」欄位'); return; }
 
-  const tod = today0(), pending = [];
+  const pending = [];
   st.orders.forEach(row => {
     if (statusCol && str(row[statusCol])!=='工作結束') return;
     if (str(row[reviewCol])!=='') return;
-    const endDate=parseEndDate(str(row[endCol])); if(!endDate||endDate>=tod) return;
     const storeName=storeCol?str(row[storeCol]):'', branchName=branchCol?str(row[branchCol]):'';
     if (!findMerchant(storeName, branchName||storeName)) return;
-    const days=Math.floor((tod-endDate)/864e5);
     pending.push({
       branch:branchName||storeName, company:storeName,
       worker:str(row[workerCol])||'—',
-      workDate:str(row[endCol]).slice(0,10), days,
+      workDate:str(row[endCol]).slice(0,10),
       orderNum:orderNumCol?cleanId(row[orderNumCol]):'',
       adjust:adjustCol?str(row[adjustCol]):'',
       startTime:startCol?extractTime(str(row[startCol])):'',
@@ -3042,7 +3038,7 @@ function renderReviews() {
   pending.sort((a,b) => {
     const c=a.company.localeCompare(b.company,'zh-Hant'); if(c!==0) return c;
     const c2=(a.branch||a.company).localeCompare(b.branch||b.company,'zh-Hant'); if(c2!==0) return c2;
-    return b.days-a.days;
+    return a.workDate.localeCompare(b.workDate);
   });
   pending.forEach(p => { p._key=p.branch+'|'+p.worker+'|'+p.workDate; });
   st._lastPending = pending;
