@@ -2631,6 +2631,9 @@ async function loadFromFolder(silent = false) {
     if (name.includes('商家設定') && (name.endsWith('.xlsx') || name.endsWith('.xls') || isZip))
       cfgFile = await entry.getFile();
   }
+  // 重新載入時清空勾選狀態，避免舊資料殘留
+  st.checked = new Set();
+  st.reviewChecked = new Set();
   try {
     if (cfgFile)   { await parseConfigData(await unzipIfNeeded(cfgFile, '.xlsx')); }
     if (appFile)   { await parseAppData(await unzipIfNeeded(appFile, '.csv')); }
