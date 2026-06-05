@@ -2728,7 +2728,7 @@ function switchTab(tab) {
 
 function render() {
   // count badges
-  const overviewCnt = st.apps.filter(a => a._mine && str(a['狀態']).includes('申請')).length;
+  const overviewCnt = st.apps.filter(a => a._mine && str(a['狀態']) === '打工夥伴申請').length;
   const revCnt = computeReviewCount();
   document.getElementById('cnt-overview').textContent = overviewCnt;
   document.getElementById('cnt-reviews').textContent  = revCnt;
@@ -2783,7 +2783,7 @@ function sparkSvg() { return ''; } // unused; kept for backward-compat
 function renderSummary() {
   const el = document.getElementById('pane-summary');
   const appTotal   = st.apps.filter(a => a._mine).length;
-  const appPending = st.apps.filter(a => a._mine && str(a['狀態']).includes('申請')).length;
+  const appPending = st.apps.filter(a => a._mine && str(a['狀態']) === '打工夥伴申請').length;
   const merchants  = st.merchants.length;
   const hasSched   = st.merchants.filter(m => m.hasSched).length;
   const reviewCount = computeReviewCount();
@@ -2880,7 +2880,7 @@ function renderOverview() {
   if (!st.merchants.length) { el.innerHTML=empty('cog','尚未設定店鋪','請先上傳店鋪設定資料'); return; }
   if (!st.apps.length)       { el.innerHTML=empty('folder','尚未匯入申請','請上傳工作申請資料'); return; }
 
-  let data = st.apps.filter(a => a._mine);
+  let data = st.apps.filter(a => a._mine && str(a['狀態']) === '打工夥伴申請');
   if (st.f.from) data = data.filter(a => a._workDate>=st.f.from);
   if (st.f.to)   data = data.filter(a => a._workDate<=st.f.to);
   data.sort((a,b) => a._workDate.localeCompare(b._workDate));
