@@ -2664,7 +2664,10 @@ function extractTime(s) { const m = String(s||'').match(/(\d{1,2}:\d{2})/); retu
 function toMins(s) { const m = String(s||'').match(/(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : null; }
 function clockStatus(startTime, endTime, actualIn, actualOut) {
   const si = toMins(startTime), so = toMins(endTime);
-  const ai = toMins(actualIn), ao = toMins(actualOut);
+  const ai = toMins(actualIn);
+  let ao = toMins(actualOut);
+  // 跨午夜修正：排班結束 >= 22:00 且實際下班 <= 02:00，視為隔天打卡
+  if (so !== null && ao !== null && so >= 22*60 && ao <= 2*60) ao += 1440;
   const issues = [];
   if (!actualIn.trim()) issues.push('沒打卡');
   else if (si !== null && ai !== null && ai > si) issues.push('遲到 ' + extractTime(actualIn));
