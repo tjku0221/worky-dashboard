@@ -2747,9 +2747,19 @@ function switchTab(tab) {
 
 function render() {
   // count badges
-  const overviewCnt = st.apps.filter(a => a._mine && str(a['狀態']) === '打工夥伴申請').length;
+  const overviewCnt = st.apps.filter(a => {
+    if (!a._mine || str(a['狀態']) !== '打工夥伴申請') return false;
+    if (st.f.from && a._workDate < st.f.from) return false;
+    if (st.f.to   && a._workDate > st.f.to)   return false;
+    return true;
+  }).length;
   const revCnt = computeReviewCount();
-  const cancelCnt = st.apps.filter(a => a._mine && str(a['狀態']) === '打工夥伴取消').length;
+  const cancelCnt = st.apps.filter(a => {
+    if (!a._mine || str(a['狀態']) !== '打工夥伴取消') return false;
+    if (st.fc.from && a._workDate < st.fc.from) return false;
+    if (st.fc.to   && a._workDate > st.fc.to)   return false;
+    return true;
+  }).length;
   document.getElementById('cnt-overview').textContent = overviewCnt;
   document.getElementById('cnt-reviews').textContent  = revCnt;
   document.getElementById('cnt-cancel').textContent   = cancelCnt;
@@ -2996,8 +3006,8 @@ function renderOverview() {
   });
 }
 
-function applyFilter(key, val) { st.f[key]=val; renderOverview(); }
-function applyCancelFilter(key, val) { st.fc[key]=val; renderCancel(); }
+function applyFilter(key, val) { st.f[key]=val; render(); }
+function applyCancelFilter(key, val) { st.fc[key]=val; render(); }
 
 function syncTheadOffset(pane) {
   if (!pane) return;
@@ -3540,8 +3550,7 @@ const datePicker = {
   pick(iso) {
     st[this._stateKey][this.bindKey] = iso;
     this.close();
-    if (this._stateKey === 'fc') renderCancel();
-    else renderOverview();
+    render();
   },
   isoOf(date) {
     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
