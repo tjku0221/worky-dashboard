@@ -2450,6 +2450,7 @@ async function parseConfigData(file) {
         if (hi < 0) { showAlert({ title: '資料格式不符', body: '找不到「店鋪名稱」標題列，請確認上傳的是「商家設定表」', tone: 'warning' }); res(); return; }
         const hdrs = rows[hi].map(h => String(h).trim());
         const ci = {
+          legalName: hdrs.findIndex(h => h.includes('法人')),
           company:  hdrs.findIndex(h => h.includes('店鋪名稱')),
           branch:   hdrs.findIndex(h => h.includes('分店') && !h.includes('店鋪')),
           hasSched: hdrs.findIndex(h => h.includes('雲端班表')),
@@ -2462,7 +2463,7 @@ async function parseConfigData(file) {
         for (let i = hi + 1; i < rows.length; i++) {
           const r = rows[i]; const company = str(r[ci.company]); if (!company) continue;
           const branch = str(r[ci.branch]);
-          merchants.push({ company, branch: branch || company, hasSched: /^(是|yes|有)$/i.test(str(r[ci.hasSched])), url: str(r[ci.url]), keyword: str(r[ci.keyword]), fmt: str(r[ci.fmt]), brand: str(r[ci.brand]) });
+          merchants.push({ legalName: ci.legalName >= 0 ? str(r[ci.legalName]) : '', company, branch: branch || company, hasSched: /^(是|yes|有)$/i.test(str(r[ci.hasSched])), url: str(r[ci.url]), keyword: str(r[ci.keyword]), fmt: str(r[ci.fmt]), brand: str(r[ci.brand]) });
         }
         st.merchants = merchants; st.isDemo = false;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(merchants));
@@ -2749,7 +2750,7 @@ function render() {
   }).length;
   const revCnt = computeReviewCount();
   const cancelCnt = st.apps.filter(a => {
-    if (!a._mine || str(a['狀態']) !== '打工夥伴取消') return false;
+    if (!a._mine || str(a['狀態']).trim() !== '打工夥伴取消') return false;
     if (st.fc.from && a._workDate < st.fc.from) return false;
     if (st.fc.to   && a._workDate > st.fc.to)   return false;
     return true;
@@ -3212,7 +3213,7 @@ function renderCancel() {
   const agreeTimeCol  = Object.keys(sample).find(h => h.trim() === '商家同意') || colKey('商家同意時間');
 
   // 日期篩選
-  let cancelled = st.apps.filter(a => a._mine && str(a['狀態']) === '打工夥伴取消');
+  let cancelled = st.apps.filter(a => a._mine && str(a['狀態']).trim() === '打工夥伴取消');
   if (st.fc.from) cancelled = cancelled.filter(a => a._workDate >= st.fc.from);
   if (st.fc.to)   cancelled = cancelled.filter(a => a._workDate <= st.fc.to);
   cancelled.sort((a, b) => a._workDate.localeCompare(b._workDate));
@@ -3220,7 +3221,7 @@ function renderCancel() {
   // 工單號碼 → 最新「商家同意」時間 Map
   const reMatchMap = new Map();
   st.apps.forEach(a => {
-    if (str(a['狀態']) !== '商家同意') return;
+    if (str(a['狀態']).trim() !== '商家同意') return;
     const wn = str(a[orderNumCol] || '');
     const t  = str(a[agreeTimeCol] || '');
     if (!wn) return;
