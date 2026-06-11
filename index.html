@@ -1653,7 +1653,7 @@ input[type="checkbox"]:indeterminate::after {
     0 0 14px rgba(var(--accent-rgb), 0.3);
 }
 .date-trigger.active svg { color: var(--accent); }
-.date-trigger.empty { color: var(--t3); }
+.date-trigger.date-empty { color: var(--t3); }
 
 .date-popover {
   position: fixed;
@@ -2926,12 +2926,12 @@ function renderOverview() {
   const filterBarInner = `
     <div class="filter-bar">
       <span class="f-label">工作日期</span>
-      <button type="button" class="date-trigger ${st.f.from?'':'empty'}" onclick="datePicker.open(this, 'from')">
+      <button type="button" class="date-trigger ${st.f.from?'':'date-empty'}" style="white-space:nowrap;min-height:32px;width:136px;" onclick="datePicker.open(this, 'from')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>${st.f.from ? esc(st.f.from.replace(/-/g,'/')) : '開始日期'}</span>
       </button>
       <span class="f-range-sep">→</span>
-      <button type="button" class="date-trigger ${st.f.to?'':'empty'}" onclick="datePicker.open(this, 'to')">
+      <button type="button" class="date-trigger ${st.f.to?'':'date-empty'}" style="white-space:nowrap;min-height:32px;width:136px;" onclick="datePicker.open(this, 'to')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>${st.f.to ? esc(st.f.to.replace(/-/g,'/')) : '結束日期'}</span>
       </button>
@@ -3244,12 +3244,12 @@ function renderCancel() {
   const filterBar = `
     <div class="filter-bar">
       <span class="f-label">工作日期</span>
-      <button type="button" class="date-trigger ${st.fc.from?'':'empty'}" onclick="datePicker.open(this, 'from', 'fc')">
+      <button type="button" class="date-trigger ${st.fc.from?'':'date-empty'}" style="white-space:nowrap;min-height:32px;width:136px;" onclick="datePicker.open(this, 'from', 'fc')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>${st.fc.from ? esc(st.fc.from.replace(/-/g,'/')) : '開始日期'}</span>
       </button>
       <span class="f-range-sep">→</span>
-      <button type="button" class="date-trigger ${st.fc.to?'':'empty'}" onclick="datePicker.open(this, 'to', 'fc')">
+      <button type="button" class="date-trigger ${st.fc.to?'':'date-empty'}" style="white-space:nowrap;min-height:32px;width:136px;" onclick="datePicker.open(this, 'to', 'fc')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>${st.fc.to ? esc(st.fc.to.replace(/-/g,'/')) : '結束日期'}</span>
       </button>
@@ -3510,6 +3510,7 @@ const datePicker = {
     this.viewMonth = v ? new Date(v + 'T00:00:00') : new Date();
     this.viewMonth.setDate(1);
 
+    triggerEl.classList.remove('date-empty');
     triggerEl.classList.add('active');
     this.el = document.createElement('div');
     this.el.className = 'date-popover';
