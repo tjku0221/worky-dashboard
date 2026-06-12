@@ -2673,10 +2673,13 @@ function parseEndDate(s) { const m = String(s).match(/(\d{4})[\/\-](\d{2})[\/\-]
 function extractTime(s) { const m = String(s||'').match(/(\d{1,2}:\d{2})/); return m ? m[1] : ''; }
 function toMins(s) { const m = String(s||'').match(/(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : null; }
 function clockStatus(startTime, endTime, actualIn, actualOut) {
-  const si = toMins(startTime), so = toMins(endTime);
+  const si = toMins(startTime);
+  let so = toMins(endTime);
   const ai = toMins(actualIn);
   let ao = toMins(actualOut);
-  // 跨午夜修正：排班結束 >= 22:00 且實際下班 <= 02:00，視為隔天打卡
+  // 跨午夜排班修正：排班結束 <= 開始（含 00:00 結束），視為隔天
+  if (si !== null && so !== null && so <= si) so += 1440;
+  // 跨午夜打卡修正：排班跨日且下班打卡 <= 02:00，視為隔天打卡
   if (so !== null && ao !== null && so >= 22*60 && ao <= 2*60) ao += 1440;
   const issues = [];
   if (!actualIn.trim()) issues.push('沒打卡');
