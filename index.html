@@ -491,6 +491,7 @@ body::after {
 
 .content-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 4px 24px;
@@ -506,8 +507,15 @@ body::after {
 
 .pane { display: flex; flex-direction: column; gap: calc(14px * var(--density)); }
 
+/* When confirm tab is active, content-scroll becomes a flex passthrough */
+.content-scroll:has(#pane-confirm:not([hidden])) {
+  overflow-y: auto;
+  padding: 0 4px 24px;
+}
+
 /* Summary pane has no sticky-wrap so KPI hover glow can show fully */
 #pane-summary { padding-top: 8px; }
+#pane-confirm { display: flex; flex-direction: column; gap: calc(14px * var(--density)); }
 
 /* ── KPI tiles ─────────────────────────────────────────────────────────── */
 .kpi-grid {
@@ -1017,8 +1025,6 @@ body::after {
 }
 .company-group .shop-grid { padding: 8px 0 0; }
 
-#pane-settings .filter-bar { margin: 0 14px; }
-
 /* mono */
 .mono {
   font-family: "SF Mono", "JetBrains Mono", "Fira Code", "Menlo", monospace;
@@ -1109,10 +1115,11 @@ input[type="checkbox"]:indeterminate::after {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  min-height: 48px;
-  padding: calc(10px * var(--density)) 14px;
+  gap: 6px;
+  flex-wrap: nowrap;
+  height: 52px;
+  overflow: visible;
+  padding: 0 14px;
   background: linear-gradient(180deg, var(--well-top), var(--well-bot));
   border-radius: var(--r-pill);
   box-shadow:
@@ -1132,6 +1139,7 @@ input[type="checkbox"]:indeterminate::after {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: visible;
 }
 .sticky-wrap::after {
   content: '';
@@ -1621,8 +1629,11 @@ input[type="checkbox"]:indeterminate::after {
 
 /* ── Date picker ───────────────────────────────────────────────────────── */
 .date-trigger {
-  display: inline-flex; align-items: center; gap: 8px;
+  display: inline-flex; align-items: center; justify-content: flex-start; gap: 8px;
   padding: 6px 14px;
+  min-height: 32px;
+  width: 136px;
+  flex-shrink: 0;
   border: none;
   border-radius: var(--r-pill);
   font-size: 12.5px;
@@ -1633,6 +1644,7 @@ input[type="checkbox"]:indeterminate::after {
   cursor: pointer;
   letter-spacing: 0.2px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   box-shadow:
     inset 0 1px 0 var(--edge-hi),
     inset 0 -1px 0 var(--edge-lo),
@@ -1947,6 +1959,323 @@ input[type="checkbox"]:indeterminate::after {
 .src-hub.open .src-detail { display: block; }
 .src-pick-btn { width: 100%; justify-content: center; margin-bottom: 8px; }
 
+
+/* ══════════════ Confirm Tab ══════════════ */
+
+.cf-tabs-bar {
+  display: flex; align-items: center; gap: 5px;
+  flex-wrap: nowrap; overflow-x: auto; overflow-y: visible;
+  scrollbar-width: none; padding: 12px 12px 4px 8px; margin-top: -12px;
+}
+.cf-tabs-bar::-webkit-scrollbar { display: none; }
+.cf-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border: none; border-radius: var(--r-pill);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  white-space: nowrap; cursor: pointer; flex-shrink: 0;
+  background: linear-gradient(180deg, var(--raised-top), var(--raised-bot));
+  color: var(--t2);
+  box-shadow: inset 0 1px 0 var(--edge-hi), inset 0 -1px 0 var(--edge-lo),
+    0 2px 0 rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.025);
+  transition: color 0.12s, box-shadow 0.15s;
+}
+.cf-pill:hover { color: var(--t1); }
+.cf-pill.active {
+  background: linear-gradient(180deg, var(--raised-top), var(--raised-bot));
+  color: var(--accent);
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.4);
+  box-shadow: inset 0 1px 0 var(--edge-hi), inset 0 -1px 0 var(--edge-lo),
+    0 2px 0 rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.025);
+}
+.cf-pill-del {
+  background: none; border: none; color: rgba(255,255,255,0.55);
+  cursor: pointer; font-size: 14px; line-height: 1;
+  padding: 0 0 0 4px; margin: 0; transition: color 0.12s;
+  user-select: none;
+}
+.cf-pill-del:hover { color: var(--pink); }
+
+/* x floats above pill top-left on hover */
+.cf-pill-del-badge {
+  position: absolute;
+  top: -9px; left: -3px;
+  transform: none;
+  background: none;
+  border: none;
+  color: var(--pink);
+  font-size: 16px; font-weight: 900; line-height: 1;
+  cursor: pointer;
+  z-index: 10;
+  display: none;
+  user-select: none;
+  transition: transform 0.1s, color 0.1s;
+  padding: 0;
+  pointer-events: auto;
+  text-shadow: 0 0 4px rgba(244,114,182,0.4);
+}
+.cf-pill:hover .cf-pill-del-badge { display: block; }
+.cf-pill-del-badge:hover { transform: scale(1.3); color: #fff; }
+.cf-pill-chk {
+  width: 12px; height: 12px; border-radius: 3px;
+  background: rgba(0,0,0,0.4);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+  cursor: pointer; appearance: none; -webkit-appearance: none;
+  flex-shrink: 0; position: relative;
+}
+.cf-pill-chk:checked {
+  background: linear-gradient(180deg, #2bb96a, #198a45) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 0 6px rgba(74,222,128,0.4) !important;
+}
+.cf-list-chk:checked {
+  background: linear-gradient(180deg, #2bb96a, #198a45) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 0 0 1px rgba(74,222,128,0.45), 0 0 10px rgba(74,222,128,0.4) !important;
+}
+.cf-pill:has(.cf-pill-chk:checked) { color: var(--accent) !important; }
+#cf-holiday:checked {
+  background: linear-gradient(180deg, #2bb96a, #198a45) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -1px 0 rgba(0,0,0,0.4),
+    0 0 0 1px rgba(74,222,128,0.45), 0 0 10px rgba(74,222,128,0.4) !important;
+}
+.cf-pill-chk:checked::after {
+  content: ''; position: absolute; left: 2px; top: 0;
+  width: 4px; height: 7px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.cf-pill-new {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border: none; border-radius: var(--r-pill);
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  white-space: nowrap; cursor: pointer; flex-shrink: 0;
+  background: linear-gradient(180deg, var(--accent-top-hi) 0%, var(--accent-bot) 100%);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px var(--accent-glow), 0 0 16px rgba(var(--accent-rgb),0.25);
+  transition: box-shadow 0.15s;
+}
+.cf-pill-new:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 0 0 1px var(--accent-glow), 0 0 24px rgba(var(--accent-rgb),0.4); }
+.cf-pill-actions { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+
+/* 批次按鈕 — green text/icon only */
+.cf-batch-btn {
+  color: var(--green) !important;
+}
+.cf-batch-btn svg { color: var(--green); }
+
+/* Card-tabs area inside cf-form-shell */
+.cf-card-tabs {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.4);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.04);
+  background: linear-gradient(180deg, rgba(255,255,255,0.025), transparent);
+}
+.cf-card-tabs .cf-tabs-bar { gap: 5px; }
+.cf-form-shell {
+  background: linear-gradient(180deg, var(--raised-top) 0%, var(--raised-bot) 100%);
+  border-radius: var(--r-lg);
+  overflow: visible; /* override .card's overflow:hidden to keep rounded corners */
+  box-shadow:
+    inset 0 1px 0 var(--edge-hi), inset 0 -1px 0 var(--edge-lo),
+    0 1px 0 rgba(0,0,0,0.4),
+    0 calc(14px * var(--depth)) calc(36px * var(--depth)) rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.03);
+}
+.cf-form-well {
+  background: linear-gradient(180deg, var(--well-top), var(--well-bot));
+  margin: 14px; border-radius: var(--r-md);
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.65),
+    inset 0 -1px 0 rgba(255,255,255,0.04), 0 1px 0 rgba(255,255,255,0.05);
+  overflow: hidden;
+}
+.cf-form-scroll {
+  padding: 16px 20px 20px;
+}
+.cf-form-scroll::-webkit-scrollbar { width: 8px; }
+.cf-form-scroll::-webkit-scrollbar-track { background: transparent; }
+.cf-form-scroll::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#2a3552,#1a2238); border-radius: 4px; }
+.cf-salary-well {
+  background: linear-gradient(180deg, #0e0a18, #080510);
+  border: 1px solid rgba(244,197,118,0.16);
+  border-radius: var(--r-md); margin: 6px 14px 14px; padding: 16px 20px;
+  box-shadow: 0 0 18px rgba(244,197,118,0.06), inset 0 1px 0 rgba(255,200,120,0.10);
+}
+
+/* Adjusted work time column — gold text */
+.cf-adj-col input,
+.cf-adj-col select {
+  color: var(--gold) !important;
+}
+
+/* Hide number input spinners */
+.cf-form-shell input[type="number"]::-webkit-inner-spin-button,
+.cf-form-shell input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.cf-form-shell input[type="number"] { -moz-appearance: textfield; }
+.cf-field .date-trigger {
+  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  min-height: 36px;
+  height: 36px;
+}
+.cf-section-title {
+  font-size: 13px; font-weight: 700; color: var(--t1);
+  text-transform: uppercase; letter-spacing: 1.4px;
+  padding: 22px 0 10px; text-shadow: 0 1px 0 rgba(0,0,0,0.5);
+}
+.cf-section-title:first-child { padding-top: 0; }
+.cf-row { display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.cf-field { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 4px; }
+.cf-label { font-size: 13px; font-weight: 600; color: var(--t2); letter-spacing: 0.3px; }
+.cf-input {
+  padding: 8px 12px; border: none; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 500; color: var(--t1); font-family: inherit;
+  background: linear-gradient(180deg, #1a1e2e, #11141f);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.7), inset 0 -1px 0 rgba(255,255,255,0.05), 0 0 0 1px rgba(255,255,255,0.04);
+  outline: none; width: 100%; transition: box-shadow 0.15s;
+}
+.cf-input:focus { box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 0 0 1px var(--accent-glow), 0 0 10px rgba(var(--accent-rgb),0.2); }
+.cf-input::placeholder { color: var(--t4); }
+.cf-time-group { display: flex; align-items: center; gap: 6px; }
+.cf-time-sep { font-size: 12px; color: var(--t3); flex-shrink: 0; }
+.cf-time-input {
+  width: 44px; padding: 4px 5px; border: none; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 500; color: var(--t1); font-family: inherit; text-align: center;
+  background: linear-gradient(180deg, #1a1e2e, #11141f);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.7), inset 0 -1px 0 rgba(255,255,255,0.05), 0 0 0 1px rgba(255,255,255,0.04);
+  outline: none; font-variant-numeric: tabular-nums; transition: box-shadow 0.15s;
+}
+.cf-time-input:focus { box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 0 0 1px var(--accent-glow); }
+.cf-checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; color: var(--t2); justify-content: flex-start; }
+
+/* Combo box (custom searchable dropdown) */
+.cf-combo-wrap {
+  position: relative;
+}
+.cf-combo-wrap .cf-combo-arrow {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--t3); pointer-events: none;
+  transition: transform 0.15s, color 0.15s;
+}
+.cf-combo-wrap:focus-within .cf-combo-arrow { color: var(--t2); transform: translateY(-50%) rotate(180deg); }
+.cf-combo-wrap .cf-input { padding-right: 30px; }
+.cf-combo-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; right: 0;
+  background: linear-gradient(180deg, var(--raised-top), var(--raised-bot));
+  border-radius: var(--r-md);
+  box-shadow:
+    inset 0 1px 0 var(--edge-hi),
+    inset 0 -1px 0 var(--edge-lo),
+    0 8px 24px rgba(0,0,0,0.6),
+    0 0 0 1px rgba(255,255,255,0.04);
+  z-index: 50;
+  max-height: calc(5 * 37px);
+  overflow-y: auto;
+  display: none;
+}
+.cf-combo-dropdown::-webkit-scrollbar { width: 6px; }
+.cf-combo-dropdown::-webkit-scrollbar-track { background: transparent; }
+.cf-combo-dropdown::-webkit-scrollbar-thumb { background: linear-gradient(180deg,#2a3552,#1a2238); border-radius: 3px; }
+.cf-combo-dropdown.open { display: block; }
+.cf-combo-option {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--t2);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+.cf-combo-option:hover, .cf-combo-option.active {
+  background: rgba(var(--accent-rgb), 0.10);
+  color: var(--t1);
+}
+
+/* Two-column layout for orig/adj time */
+.cf-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 0; margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 22px; }
+.cf-col { display: flex; flex-direction: column; }
+.cf-col .cf-section-title { padding-top: 0; }
+.cf-sal-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--t2); padding: 4px 0; }
+.cf-sal-row.total,
+.cf-salary-row.total { font-size: 16px; font-weight: 700; color: var(--gold); border-top: 1px solid rgba(255,255,255,0.08); margin-top: 6px; padding-top: 10px; text-shadow: 0 0 8px var(--gold-glow); }
+.cf-sal-val { font-variant-numeric: tabular-nums; }
+.cf-sal-val.pos { color: var(--green); }
+.cf-sal-val.neg { color: var(--pink); }
+.cf-sal-val.total { color: var(--gold); text-shadow: 0 0 12px var(--gold-glow); font-size: 18px; }
+.cf-summary-box {
+  display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0;
+  padding: 10px 12px; border-radius: var(--r-sm);
+  background: linear-gradient(180deg, var(--well-top), var(--well-bot));
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+}
+.cf-summary-text { flex: 1; font-size: 12.5px; color: var(--t1); line-height: 1.6; word-break: break-all; }
+.cf-copy-btn {
+  padding: 5px 12px; border: none; border-radius: var(--r-pill);
+  font-size: 11.5px; font-weight: 600; font-family: inherit; cursor: pointer; flex-shrink: 0;
+  background: linear-gradient(180deg, var(--raised-top), var(--raised-bot));
+  color: var(--t2);
+  box-shadow: inset 0 1px 0 var(--edge-hi), inset 0 -1px 0 var(--edge-lo), 0 2px 0 rgba(0,0,0,0.3);
+  transition: color 0.12s;
+}
+.cf-copy-btn:hover { color: var(--t1); }
+.cf-attach-zone {
+  border: 1.5px dashed rgba(255,255,255,0.10); border-radius: var(--r-sm);
+  padding: 16px; text-align: center; font-size: 12.5px; color: var(--t3);
+  cursor: pointer; margin-bottom: 8px;
+  background: linear-gradient(180deg, var(--well-top), var(--well-bot));
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); transition: border-color 0.15s, color 0.15s;
+}
+.cf-attach-zone:hover { border-color: var(--accent-glow); color: var(--t2); }
+.cf-attach-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; margin-top: 20px; }
+.cf-thumb { position: relative; width: 72px; height: 72px; }
+.cf-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+.cf-thumb-del {
+  position: absolute; top: -5px; left: -5px; width: 17px; height: 17px; border-radius: 50%;
+  background: var(--pink); border: none; color: #fff; font-size: 11px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 6px rgba(244,114,182,0.5);
+}
+.cf-actions { display: flex; gap: 10px; padding: 12px 20px 6px; }
+.cf-print-btn {
+  padding: 10px 22px; border: none; border-radius: var(--r-pill);
+  font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+  background: linear-gradient(180deg, var(--accent-top-hi) 0%, var(--accent-bot) 100%);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 0 0 1px var(--accent-glow), 0 0 18px rgba(var(--accent-rgb),0.3);
+  display: flex; align-items: center; gap: 6px; transition: box-shadow 0.15s;
+}
+.cf-print-btn:hover { box-shadow: inset 0 1px 0 rgba(255,255,255,0.28), 0 0 0 1px var(--accent-glow), 0 0 28px rgba(var(--accent-rgb),0.5); }
+.cf-empty-form {
+  padding: 60px 20px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; text-align: center;
+}
+.cf-empty-form svg { color: var(--t4); }
+.cf-empty-form div { font-size: 13.5px; color: var(--t3); letter-spacing: 0.3px; }
+#cf-batch-bar {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+  background: #1d2030; border: 1px solid rgba(244,114,182,.4);
+  border-radius: 12px; padding: 12px 20px;
+  display: flex; align-items: center; gap: 14px;
+  z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,.6);
+  font-size: 14px; color: #e6ecff; white-space: nowrap;
+}
+#cf-batch-bar .cf-bar-next {
+  padding: 6px 14px; background: linear-gradient(180deg, var(--accent-top-hi), var(--accent-bot));
+  border: none; border-radius: var(--r-pill);
+  color: #fff; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 0 0 1px var(--accent-glow);
+}
+#cf-batch-bar .cf-bar-close {
+  background: none; border: none; color: var(--t3);
+  cursor: pointer; font-size: 18px; padding: 0 4px; line-height: 1; transition: color 0.12s;
+}
+#cf-batch-bar .cf-bar-close:hover { color: var(--t1); }
+
 </style>
 </head>
 <body>
@@ -2003,6 +2332,10 @@ input[type="checkbox"]:indeterminate::after {
         </svg>
         <span>待評論清單</span>
         <span class="tab-count" id="cnt-reviews">0</span>
+      </div>
+      <div class="tab" data-tab="confirm" onclick="switchTab('confirm')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+        <span>確認書</span>
       </div>
       <div class="tab" data-tab="settings" onclick="switchTab('settings')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2130,6 +2463,7 @@ input[type="checkbox"]:indeterminate::after {
       <div id="pane-reviews"   class="pane" hidden></div>
       <div id="pane-cancel"    class="pane" hidden></div>
       <div id="pane-settings"  class="pane" hidden></div>
+      <div id="pane-confirm"   class="pane" hidden></div>
     </div>
   </main>
 
@@ -2298,15 +2632,17 @@ function loadDemoData() {
   let idx = 0;
   const seed = [
     { merchant: 0, off: 1, time: '(11:00 ~ 16:00)', status: '打工夥伴申請', type: '外場' },
+    { merchant: 0, off: 1, time: '(11:00 ~ 16:00)', status: '打工夥伴取消', type: '外場' },
+    { merchant: 0, off: 2, time: '(11:00 ~ 16:00)', status: '打工夥伴取消', type: '外場' },
     { merchant: 0, off: 1, time: '(17:00 ~ 22:00)', status: '商家同意',     type: '外場' },
     { merchant: 0, off: 2, time: '(11:00 ~ 16:00)', status: '打工夥伴申請', type: '外場' },
     { merchant: 1, off: 0, time: '(09:00 ~ 14:00)', status: '商家同意',     type: '內場' },
-    { merchant: 1, off: 1, time: '(14:00 ~ 21:00)', status: '打工夥伴申請', type: '內場' },
+    { merchant: 1, off: 1, time: '(14:00 ~ 21:00)', status: '打工夥伴取消', type: '內場' },
     { merchant: 1, off: 1, time: '(09:00 ~ 14:00)', status: '打工夥伴申請', type: '內場' },
     { merchant: 2, off: 0, time: '(17:00 ~ 22:00)', status: '商家同意',     type: '外場' },
-    { merchant: 2, off: 2, time: '(11:30 ~ 14:30)', status: '打工夥伴申請', type: '外場' },
+    { merchant: 2, off: 2, time: '(11:30 ~ 14:30)', status: '打工夥伴取消', type: '外場' },
     { merchant: 3, off: 1, time: '(11:00 ~ 15:00)', status: '商家婉拒',     type: '清潔' },
-    { merchant: 3, off: 2, time: '(17:00 ~ 22:00)', status: '打工夥伴申請', type: '外場' },
+    { merchant: 3, off: 2, time: '(17:00 ~ 22:00)', status: '打工夥伴取消', type: '外場' },
     { merchant: 5, off: 0, time: '(10:00 ~ 17:00)', status: '商家同意',     type: '迎賓' },
     { merchant: 5, off: 3, time: '(13:00 ~ 21:00)', status: '打工夥伴申請', type: '外場' },
   ];
@@ -2315,7 +2651,9 @@ function loadDemoData() {
     const date = shift(s.off);
     const work = `${fmt(date)} ${s.time}`;
     const appliedDate = shift(s.off - 2);
+    const cancelDate = shift(s.off - 1);
     apps.push({
+      '工單編號': String(4839200 - i * 7),
       '登入帳號': `="886${String(900000000 + (i * 13 + 7) * 1000007 % 100000000).slice(0,9)}"`,
       '打工者姓名': names[i % names.length],
       '工作類型': s.type,
@@ -2323,6 +2661,8 @@ function loadDemoData() {
       '打工夥伴申請時間': `${fmt(appliedDate)} ${String(8+i).padStart(2,'0')}:${String((i*7)%60).padStart(2,'0')}`,
       '狀態': s.status,
       '店鋪名稱': `${m.company}\n${m.branch}`,
+      '打工夥伴取消': s.status === '打工夥伴取消' ? `${fmt(cancelDate)} ${String(10 + (i*3)%8).padStart(2,'0')}:${String((i*17+5)%60).padStart(2,'0')}` : '',
+      '商家同意': s.status === '商家同意' ? `${fmt(date)} ${String(9 + (i%4)).padStart(2,'0')}:${String((i*7)%60).padStart(2,'0')}` : '',
       _id: idx++,
       _company: m.company,
       _branch: m.branch,
@@ -2728,14 +3068,15 @@ function setDot(id, ok, label) {
 function switchTab(tab) {
   st.activeTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
-  ['summary','overview','reviews','cancel','settings'].forEach(t => { const p=document.getElementById('pane-'+t); if(p) p.hidden=(t!==tab); });
+  ['summary','overview','reviews','cancel','settings','confirm'].forEach(t => { const p=document.getElementById('pane-'+t); if(p) p.hidden=(t!==tab); });
 
   const titles = {
     summary: { t: '總覽',         s: '今日重點摘要' },
     overview:{ t: '申請總覽',     s: '依店鋪檢視打工夥伴申請' },
     reviews: { t: '待評論清單',   s: '工作結束待商家評論' },
     cancel:  { t: '取消追蹤',     s: '打工夥伴取消工作名單' },
-    settings:{ t: '店鋪設定',     s: '' },
+    settings:{ t: '店鋪設定',     s: '商家名單與班表設定' },
+    confirm: { t: '確認書',       s: '調整工時確認書製作' },
   };
   const meta = titles[tab];
   document.getElementById('tb-title').textContent = meta.t;
@@ -2767,6 +3108,7 @@ function render() {
   else if (st.activeTab==='reviews')  renderReviews();
   else if (st.activeTab==='cancel')   renderCancel();
   else if (st.activeTab==='settings') renderSettings();
+  else if (st.activeTab==='confirm')  renderConfirm();
 }
 
 function computeReviewCount() {
@@ -2929,14 +3271,14 @@ function renderOverview() {
   const filterBarInner = `
     <div class="filter-bar">
       <span class="f-label">工作日期</span>
-      <button type="button" class="date-trigger ${st.f.from?'':'date-empty'}" style="white-space:nowrap;min-height:32px;width:136px;" onclick="datePicker.open(this, 'from')">
+      <button type="button" class="date-trigger ${st.f.from?'':'date-empty'}" style="width:136px" onclick="datePicker.open(this, 'from')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>${st.f.from ? esc(st.f.from.replace(/-/g,'/')) : '開始日期'}</span>
+        <span>${st.f.from ? esc(st.f.from.replace(/-/g,' / ')) : '開始日期'}</span>
       </button>
       <span class="f-range-sep">→</span>
-      <button type="button" class="date-trigger ${st.f.to?'':'date-empty'}" style="white-space:nowrap;min-height:32px;width:136px;" onclick="datePicker.open(this, 'to')">
+      <button type="button" class="date-trigger ${st.f.to?'':'date-empty'}" style="width:136px" onclick="datePicker.open(this, 'to')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>${st.f.to ? esc(st.f.to.replace(/-/g,'/')) : '結束日期'}</span>
+        <span>${st.f.to ? esc(st.f.to.replace(/-/g,' / ')) : '結束日期'}</span>
       </button>
       <span class="f-summary">共 <b>${data.length}</b> 筆 ／ <b>${st._overviewGroups.length}</b> 個店鋪</span>
     </div>`;
@@ -3247,14 +3589,14 @@ function renderCancel() {
   const filterBar = `
     <div class="filter-bar">
       <span class="f-label">工作日期</span>
-      <button type="button" class="date-trigger ${st.fc.from?'':'date-empty'}" style="white-space:nowrap;min-height:32px;width:136px;" onclick="datePicker.open(this, 'from', 'fc')">
+      <button type="button" class="date-trigger ${st.fc.from?'':'date-empty'}" style="width:136px" onclick="datePicker.open(this, 'from', 'fc')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>${st.fc.from ? esc(st.fc.from.replace(/-/g,'/')) : '開始日期'}</span>
+        <span>${st.fc.from ? esc(st.fc.from.replace(/-/g,' / ')) : '開始日期'}</span>
       </button>
       <span class="f-range-sep">→</span>
-      <button type="button" class="date-trigger ${st.fc.to?'':'date-empty'}" style="white-space:nowrap;min-height:32px;width:136px;" onclick="datePicker.open(this, 'to', 'fc')">
+      <button type="button" class="date-trigger ${st.fc.to?'':'date-empty'}" style="width:136px" onclick="datePicker.open(this, 'to', 'fc')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>${st.fc.to ? esc(st.fc.to.replace(/-/g,'/')) : '結束日期'}</span>
+        <span>${st.fc.to ? esc(st.fc.to.replace(/-/g,' / ')) : '結束日期'}</span>
       </button>
       <span class="f-summary">共 <b>${cancelled.length}</b> 筆 ／ <b>${groups.length}</b> 個店鋪</span>
     </div>`;
@@ -3317,6 +3659,7 @@ function renderCancel() {
 
   el.innerHTML = `
     <div class="sticky-wrap">
+      ${demoBannerHtml()}
       ${filterBar}
     </div>
     ${content}`;
@@ -3509,7 +3852,9 @@ const datePicker = {
     this.bindKey = bindKey;
     this.triggerEl = triggerEl;
     this._stateKey = stateKey || 'f';
-    const v = st[this._stateKey][bindKey];
+    const v = this._stateKey === 'cf'
+      ? ((() => { const l = _cfLoad(); return l[st._cfSel] ? l[st._cfSel][bindKey] : ''; })())
+      : st[this._stateKey][bindKey];
     this.viewMonth = v ? new Date(v + 'T00:00:00') : new Date();
     this.viewMonth.setDate(1);
 
@@ -3547,6 +3892,13 @@ const datePicker = {
   },
   changeMonth(delta) { this.viewMonth.setMonth(this.viewMonth.getMonth() + delta); this.render(); },
   pick(iso) {
+    if (this._stateKey === 'cf') {
+      // 確認書日期：直接寫回 localStorage
+      _cfUpdField(this.bindKey, iso);
+      this.close();
+      renderConfirm();
+      return;
+    }
     st[this._stateKey][this.bindKey] = iso;
     this.close();
     render();
@@ -3560,7 +3912,9 @@ const datePicker = {
     const firstDow = new Date(year, month, 1).getDay();
     const lastDay = new Date(year, month+1, 0).getDate();
     const today = new Date(); today.setHours(0,0,0,0);
-    const selected = st[this._stateKey][this.bindKey];
+    const selected = this._stateKey === 'cf'
+      ? ((() => { const l = _cfLoad(); return l[st._cfSel] ? l[st._cfSel][this.bindKey] : ''; })())
+      : st[this._stateKey][this.bindKey];
 
     const cells = [];
     for (let i=0; i<firstDow; i++) cells.push('<div class="date-cell empty"></div>');
@@ -3730,12 +4084,12 @@ async function initMsal() {
 
 async function msLogin() {
   if (msIsLocalFile()) {
-    alert('Microsoft 登入需透過 GitHub Pages 開啟才能使用。\n請前往：https://tjku0221.github.io/worky-dashboard/');
+    showAlert({ title: '需透過網頁使用', body: 'Microsoft 登入需透過 GitHub Pages 開啟才能使用。', tone: 'info' });
     return;
   }
   if (!msalInstance) {
-    const hint = window._msalInitError ? `\n\n錯誤：${window._msalInitError}` : '';
-    alert('Microsoft 驗證未初始化，請重新整理頁面後再試。' + hint);
+    const hint = window._msalInitError ? `<br><br>錯誤：${esc(window._msalInitError)}` : '';
+    showAlert({ title: 'Microsoft 驗證未初始化', body: '請重新整理頁面後再試。' + hint, tone: 'error' });
     return;
   }
   try {
@@ -3745,7 +4099,7 @@ async function msLogin() {
     updateMsUI();
   } catch (e) {
     if (e.name !== 'BrowserAuthError' || !e.message.includes('user_cancelled')) {
-      alert('登入失敗：' + (e.message || e));
+      showAlert({ title: '登入失敗', body: esc(String(e.message || e)), tone: 'error' });
     }
   }
 }
@@ -3803,6 +4157,669 @@ function closeTweaks() {
   document.getElementById('tweaks').classList.remove('open');
   document.getElementById('tweaks-trigger').style.display = '';
   try { window.parent.postMessage({type:'__edit_mode_dismissed'}, '*'); } catch {}
+}
+
+
+
+/* ══════════════════════════════════════════
+   確認書 Tab — confirm (v2)
+══════════════════════════════════════════ */
+var CONFIRM_KEY = 'worky_confirm_v2';
+
+function _cfLoad() {
+  try { return JSON.parse(localStorage.getItem(CONFIRM_KEY) || '[]'); } catch(e) { return []; }
+}
+function _cfSave(list) {
+  try { localStorage.setItem(CONFIRM_KEY, JSON.stringify(list)); }
+  catch(e) { showAlert({ title: '儲存空間不足', body: '請刪除部分確認書或縮小附件圖片。', tone: 'warning' }); }
+}
+function _cfNewItem() {
+  var today = new Date().toISOString().slice(0, 10);
+  return {
+    id: Date.now(),
+    legalName: '', storeDisplay: '', address: '',
+    workerName: '', hourly: '', insurance: '',
+    signDate: today,
+    origDate: today, origStart: '', origEnd: '', origBreak: '0',
+    adjStart: '', adjEnd: '', adjBreak: '0',
+    isHoliday: false, attachments: []
+  };
+}
+
+/* ── 時間解析 ── */
+function _cfParseTime(s) {
+  s = (s || '').trim().replace(/[^0-9:]/g, '');
+  var h, m;
+  if (s.indexOf(':') >= 0) {
+    var p = s.split(':');
+    h = parseInt(p[0]) || 0;
+    m = parseInt(p[1]) || 0;
+  } else {
+    var pad = s.padStart(4, '0');
+    h = parseInt(pad.slice(0, 2)) || 0;
+    m = parseInt(pad.slice(2)) || 0;
+  }
+  h = Math.min(h, 23); m = Math.min(m, 59);
+  return h * 60 + m;
+}
+function _cfFmtTime(mins) {
+  var h = Math.floor(mins / 60) % 24;
+  var m = mins % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+function cfNormTime(el) {
+  if (!el.value.trim()) return;
+  el.value = _cfFmtTime(_cfParseTime(el.value));
+  cfUpdInp(el);
+}
+function cfFocusNext(el) {
+  var all = Array.from(document.querySelectorAll('.cf-input'));
+  var i = all.indexOf(el);
+  if (i >= 0 && i < all.length - 1) all[i + 1].focus();
+}
+function cfTimeInput(el) {
+  var digits = el.value.replace(/\D/g, '');
+  if (digits.length >= 4) {
+    digits = digits.slice(0, 4);
+    el.value = digits.slice(0, 2) + ':' + digits.slice(2, 4);
+    cfUpdInp(el);
+    cfFocusNext(el);
+  }
+}
+
+/* ── 淨工時計算（支援跨日） ── */
+function _cfNetMins(start, end, breakMins) {
+  var s = _cfParseTime(start);
+  var e = _cfParseTime(end);
+  var tot = e - s;
+  if (tot <= 0) tot += 24 * 60;   // 跨日
+  return Math.max(0, tot - (parseFloat(breakMins) || 0));
+}
+
+/* ── 薪資計算 ── */
+function _cfCalc(item) {
+  var hourly = parseFloat(item.hourly) || 0;
+  var insur  = parseFloat(item.insurance) || 0;
+  var net    = _cfNetMins(item.adjStart, item.adjEnd, item.adjBreak);
+  var rate   = hourly / 60;
+  var norm   = Math.min(net, 480);
+  var ot1    = Math.min(Math.max(net - 480, 0), 120);
+  var ot2    = Math.min(Math.max(net - 600, 0), 120);
+  var base   = norm * rate;
+  var ot1p   = ot1 * rate * 1.34;
+  var ot2p   = ot2 * rate * 1.67;
+  var holi   = item.isHoliday ? norm * rate : 0;
+  var final  = Math.ceil(base + ot1p + ot2p + holi - insur);
+  return { base: base, ot1p: ot1p, ot2p: ot2p, holi: holi, insur: insur, final: final, net: net, hourly: hourly };
+}
+
+/* ── 輔助 ── */
+function _cfRoc(iso) {
+  if (!iso) return { y: '', m: '', d: '' };
+  var p = iso.split('-');
+  return { y: String(parseInt(p[0]) - 1911), m: String(parseInt(p[1])), d: String(parseInt(p[2])) };
+}
+function _cfFmtH(m) {
+  if (!m) return '0H';
+  return m % 60 === 0 ? (m / 60) + 'H' : (m / 60).toFixed(1) + 'H';
+}
+function _cfFmtMoney(n) { return Math.round(n).toLocaleString(); }
+function _cfDisplayStore(item) {
+  return item.storeDisplay || item.branch || item.legalName || '—';
+}
+
+/* ── 薪資簡述 ── */
+function _cfSummaryText(item) {
+  var s = _cfCalc(item);
+  var roc = _cfRoc(item.origDate);
+  var dateStr = roc.y ? roc.y + '年' + roc.m + '月' + roc.d + '日' : '—';
+  var insur = parseFloat(item.insurance) || 0;
+  var h = parseFloat(item.hourly) || 0;
+  var storeName = _cfDisplayStore(item);
+  var norm = Math.min(s.net, 480);
+  var ot1 = Math.min(Math.max(s.net - 480, 0), 120);
+  var ot2 = Math.min(Math.max(s.net - 600, 0), 120);
+  var holi = item.isHoliday ? norm : 0;
+  var parts = [];
+  if (norm > 0) parts.push(_cfFmtH(norm) + ' × ' + h);
+  if (holi > 0) parts.push(_cfFmtH(holi) + ' × ' + h + '（假日加給）');
+  if (ot1 > 0)  parts.push(_cfFmtH(ot1) + ' × ' + h + ' × 1.34');
+  if (ot2 > 0)  parts.push(_cfFmtH(ot2) + ' × ' + h + ' × 1.67');
+  var expr = parts.join(' + ') || '—';
+  if (insur > 0) expr += ' − ' + insur;
+  return storeName + '：' + dateStr + ' ' + expr + ' = ' + (s.final > 0 ? s.final.toLocaleString() : '—') + ' 元';
+}
+
+/* ── 商家資料 ── */
+function _cfLegals() {
+  var seen = {};
+  (st.merchants || []).forEach(function(m) { var k = m.legalName || m.company; if (k) seen[k] = 1; });
+  return Object.keys(seen).sort();
+}
+function _cfStoreOptions(legalName) {
+  var seen = {};
+  (st.merchants || []).forEach(function(m) {
+    var k = m.legalName || m.company;
+    if (legalName && k !== legalName) return;
+    var disp = m.branch || m.company;
+    if (disp) seen[disp] = 1;
+  });
+  return Object.keys(seen).sort();
+}
+
+/* ── HTML 建構輔助 ── */
+function _cfInput(field, type, placeholder, val, extra) {
+  return '<input class="cf-input" type="' + type + '" placeholder="' + placeholder + '" value="' + esc(val || '') + '" data-field="' + field + '" oninput="cfUpdInp(this)"' + (extra ? ' ' + extra : '') + '>';
+}
+function _cfTimeInput(field, val) {
+  return '<input class="cf-input cf-time-inp" type="text" placeholder="HHMM" value="' + esc(val || '') + '" data-field="' + field + '" oninput="cfTimeInput(this)" onblur="cfNormTime(this)">';
+}
+function _cfDatalist(id, options) {
+  return '<datalist id="' + id + '">' + options.map(function(o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>';
+}
+
+/* ── 薪資 HTML ── */
+function _cfSalaryHTML(sal) {
+  if (!sal) return '';
+  return '<div class="cf-salary-box">'
+    + '<div class="cf-salary-row"><span class="lbl">基本薪（' + _cfFmtH(Math.min(sal.net, 480)) + '）</span><span class="val">$ ' + _cfFmtMoney(sal.base) + '</span></div>'
+    + (sal.ot1p > 0 ? '<div class="cf-salary-row"><span class="lbl">加班費（8–10H ×1.34）</span><span class="val">$ ' + _cfFmtMoney(sal.ot1p) + '</span></div>' : '')
+    + (sal.ot2p > 0 ? '<div class="cf-salary-row"><span class="lbl">加班費（10–12H ×1.67）</span><span class="val">$ ' + _cfFmtMoney(sal.ot2p) + '</span></div>' : '')
+    + (sal.holi > 0 ? '<div class="cf-salary-row"><span class="lbl">國定假日加給</span><span class="val">$ ' + _cfFmtMoney(sal.holi) + '</span></div>' : '')
+    + '<div class="cf-salary-row"><span class="lbl">勞保自付額</span><span class="val">− $ ' + _cfFmtMoney(sal.insur) + '</span></div>'
+    + '<div class="cf-salary-row total"><span class="lbl">最終金額</span><span class="val"> $ ' + (sal.final > 0 ? sal.final.toLocaleString() : '—') + '</span></div>'
+    + '</div>';
+}
+
+/* ══════════════ renderConfirm ══════════════ */
+function renderConfirm() {
+  var el = document.getElementById('pane-confirm');
+  var list = _cfLoad();
+  if (!Number.isFinite(st._cfSel) || st._cfSel >= list.length) {
+    st._cfSel = list.length > 0 ? 0 : -1;
+  }
+  var item = st._cfSel >= 0 ? list[st._cfSel] : null;
+  var legals = _cfLegals();
+  var stores = item ? _cfStoreOptions(item.legalName) : [];
+  var sal = item ? _cfCalc(item) : null;
+
+  /* 左側清單 */
+  var listHtml = list.map(function(c, i) {
+    var roc = _cfRoc(c.origDate);
+    var dStr = roc.y ? roc.y + '/' + String(roc.m).padStart(2,'0') + '/' + String(roc.d).padStart(2,'0') : '—';
+    var name = _cfDisplayStore(c) || '（未填）';
+    var checked = st._cfBatch && st._cfBatch[i] ? ' checked' : '';
+    return '<div class="confirm-item' + (i === st._cfSel ? ' active' : '') + '" onclick="cfSelect(' + i + ')">'
+      + '<input type="checkbox" class="cf-list-chk" data-idx="' + i + '" onclick="event.stopPropagation();cfToggleBatch(' + i + ')"' + checked + '>'
+      + '<button class="confirm-item-del" onclick="event.stopPropagation();cfDelete(' + i + ')" title="刪除">×</button>'
+      + '<div class="confirm-item-name">' + esc(name) + '</div>'
+      + '<div class="confirm-item-date">' + esc(c.workerName || '—') + '　' + dStr + '</div>'
+      + '</div>';
+  }).join('');
+
+  /* 附件縮圖 */
+  var thumbsHtml = '';
+  if (item && item.attachments && item.attachments.length) {
+    thumbsHtml = '<div class="cf-attach-thumbs">'
+      + item.attachments.map(function(s, i) {
+          return '<div class="cf-thumb"><img src="' + s + '"><button class="cf-thumb-del" data-idx="' + i + '" onclick="cfDelAttach(this.dataset.idx)" title="移除">×</button></div>';
+        }).join('')
+      + '</div>';
+  }
+
+  /* 右側表單 */
+  var formHtml;
+  if (!item) {
+    formHtml = '<div class="confirm-form-panel"><div class="confirm-empty">'
+      + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+      + '<div>點擊「＋ 新增確認書」開始</div></div></div>';
+  } else {
+    formHtml = '<div class="cf-form-well" id="cf-form-panel"'
+      + ' ondragover="cfDragOver(event)" ondrop="cfDrop(event)">'
+      + '<div class="cf-form-scroll">'
+      + '<div class="cf-form-inner">'
+
+      /* ── 卡一：人員 + 商家 + 時間 ── */
+
+      /* 第一行：原訂日期 + 姓名 + 時薪 + 勞保 */
+      + '<div class="cf-section-title" style="padding-top:0">工作日期與人員時薪</div>'
+      + '<div class="cf-row" style="flex-wrap:nowrap;align-items:flex-start;margin-bottom:0">'
+      + '<div class="cf-field" style="max-width:200px;flex-shrink:0"><div class="cf-label">原訂日期</div>'
+      + '<button type="button" class="date-trigger' + (item.origDate ? '' : ' empty') + '" onclick="datePicker.open(this,\'origDate\',\'cf\')">'
+      + '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+      + '<span>' + (item.origDate ? item.origDate.replace(/-/g, ' / ') : '選擇日期') + '</span>'
+      + '</button>'
+      + '</div>'
+      + '<div class="cf-field" style="flex:1;min-width:0"><div class="cf-label">姓名</div>' + _cfInput('workerName', 'text', '', item.workerName) + '</div>'
+      + '<div class="cf-field" style="flex:1;min-width:0"><div class="cf-label" style="display:flex;align-items:center;gap:8px;">時薪（元）<input type="checkbox" id="cf-holiday" data-field="isHoliday" onchange="cfUpdChk(this)"' + (item.isHoliday ? ' checked' : '') + '><label for="cf-holiday" style="font-weight:400;cursor:pointer;color:var(--gold)">國定假日</label></div>' + _cfInput('hourly', 'number', '', item.hourly) + '</div>'
+      + '<div class="cf-field" style="flex:1;min-width:0"><div class="cf-label">勞保自付額（元）</div>' + _cfInput('insurance', 'number', '', item.insurance) + '</div>'
+      + '</div>'
+
+      /* 公司資訊 */
+      + '<div class="cf-section-title">公司資訊</div>'
+      + _cfDatalist('cf-dl-legal', legals)
+      + _cfDatalist('cf-dl-store', stores)
+      + '<div class="cf-row">'
+      + '<div class="cf-field" style="flex:1.2"><div class="cf-label">法人公司名</div>'
+      + '<div class="cf-combo-wrap">'
+      + '<input class="cf-input" id="cf-inp-legal" autocomplete="off" value="' + esc(item.legalName || '') + '" data-field="legalName" oninput="cfComboFilter(\'legal\',this.value)" onfocus="cfComboOpen(\'legal\')" onblur="cfComboBlur(\'legal\')" placeholder="">'
+      + '<svg class="cf-combo-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'
+      + '<div class="cf-combo-dropdown" id="cf-dd-legal">' + legals.map(function(o){return '<div class="cf-combo-option" onmousedown="cfComboSelect(\'legal\',\'' + esc(o) + '\')">'+esc(o)+'</div>';}).join('') + '</div>'
+      + '</div></div>'
+      + '<div class="cf-field" style="flex:1.2"><div class="cf-label">店鋪分店名</div>'
+      + '<div class="cf-combo-wrap">'
+      + '<input class="cf-input" id="cf-inp-store" autocomplete="off" value="' + esc(item.storeDisplay || '') + '" data-field="storeDisplay" oninput="cfComboFilter(\'store\',this.value)" onfocus="cfComboOpen(\'store\')" onblur="cfComboBlur(\'store\')" placeholder="">'
+      + '<svg class="cf-combo-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>'
+      + '<div class="cf-combo-dropdown" id="cf-dd-store">' + stores.map(function(o){return '<div class="cf-combo-option" onmousedown="cfComboSelect(\'store\',\'' + esc(o) + '\')">'+esc(o)+'</div>';}).join('') + '</div>'
+      + '</div></div>'
+      + '<div class="cf-field" style="flex:1.8;min-width:0"><div class="cf-label">地址</div>'
+      + _cfInput('address', 'text', '', item.address)
+      + '</div></div>'
+
+      /* 原訂 + 調整工作時間 並排 */
+      + '<div class="cf-two-col">'
+
+      + '<div class="cf-col">'
+      + '<div class="cf-section-title">原訂工作時間</div>'
+      + '<div class="cf-row" style="gap:8px">'
+      + '<div class="cf-field"><div class="cf-label">時段（24小時制）</div>'
+      + '<div class="cf-time-group">'
+      + _cfTimeInput('origStart', item.origStart)
+      + '<span class="cf-time-sep">至</span>'
+      + _cfTimeInput('origEnd', item.origEnd)
+      + '</div></div>'
+      + '<div class="cf-field" style="max-width:90px"><div class="cf-label">休息（分鐘）</div>'
+      + _cfInput('origBreak', 'number', '0', item.origBreak, 'min="0" step="30"')
+      + '</div></div>'
+      + '</div>'
+
+      + '<div class="cf-col cf-adj-col">'
+      + '<div class="cf-section-title" style="color:var(--gold)">調整後工作時間</div>'
+      + '<div class="cf-row" style="gap:8px">'
+      + '<div class="cf-field"><div class="cf-label">時段（24小時制）</div>'
+      + '<div class="cf-time-group">'
+      + _cfTimeInput('adjStart', item.adjStart)
+      + '<span class="cf-time-sep">至</span>'
+      + _cfTimeInput('adjEnd', item.adjEnd)
+      + '</div></div>'
+      + '<div class="cf-field" style="max-width:90px"><div class="cf-label">休息（分鐘）</div>'
+      + _cfInput('adjBreak', 'number', '0', item.adjBreak, 'min="0" step="30"')
+      + '</div></div>'
+      + '</div>'
+
+      + '</div>'
+
+
+      /* ── 卡二：薪資計算 ── */
+      + '</div></div>' /* close main form-scroll+well */
+      + '<div class="cf-salary-well">'
+      + '<div class="cf-section-title">薪資計算</div>'
+      + '<div id="cf-sal-box">' + _cfSalaryHTML(sal) + '</div>'
+      + '</div>'
+      + '<div class="cf-form-well"><div class="cf-form-scroll"><div class="cf-form-inner">'
+
+      /* ── 輸出區 ── */
+
+      /* 薪資簡述 */
+      + '<div class="cf-section-title">薪資簡述</div>'
+      + '<div class="cf-summary-box">'
+      + '<span class="cf-summary-text" id="cf-summary">' + esc(_cfSummaryText(item)) + '</span>'
+      + '<button class="cf-copy-btn" onclick="cfCopy()">複製</button>'
+      + '</div>'
+
+      /* 附件截圖 */
+      + '<div class="cf-section-title" style="padding-top:10px">附件截圖</div>'
+      + '<div class="cf-attach-zone" id="cf-dropzone" onclick="document.getElementById(\'cf-file-inp\').click()">'
+      + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 6px;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+      + '點擊上傳、拖曳或 Ctrl+V 貼上圖片'
+      + '</div>'
+      + '<input type="file" id="cf-file-inp" accept="image/*" multiple hidden onchange="cfAddImgFiles(event)">'
+      + thumbsHtml
+
+      /* 簽署日期 */
+      + '<div class="cf-section-title">簽署日期</div>'
+      + (function(){var rs=_cfRoc(item.signDate);return '<div class="cf-row" style="display:flex;align-items:center;gap:12px"><div style="color:var(--t1);font-weight:600;letter-spacing:1px">'+(rs.y?'民國 '+rs.y+' 年 '+String(rs.m).padStart(2,'0')+' 月 '+String(rs.d).padStart(2,'0')+' 日':'—')+'</div><button class="btn compact cf-batch-btn" onclick="cfPrintOne()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 下載</button></div>';}())
+
+
+
+      + '</div>' /* end cf-form-inner */
+      + '</div>';
+  }
+
+  /* ── 頂部 tabs bar ── */
+  var CF_MAX = 5;
+  var newBtn = list.length < CF_MAX
+    ? '<button class="cf-pill-new" onclick="cfNew()">'
+      + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
+      + '新增</button>'
+    : '';
+  var batchBtn = list.length > 0
+    ? '<button class="btn compact cf-batch-btn" onclick="cfBatchPrint()">'
+      + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+      + '批次</button>'
+    : '';
+
+  var tabsHtml = '<div class="cf-tabs-bar" style="gap:8px">' + newBtn;
+  list.forEach(function(c, i) {
+    var workerLabel = c.workerName || '（未填）';
+    var roc = _cfRoc(c.origDate);
+    var dStr = roc.y ? roc.y + '/' + String(roc.m).padStart(2,'0') + '/' + String(roc.d).padStart(2,'0') : '';
+    var label = workerLabel + (dStr ? ' ' + dStr : '');
+    var checked = st._cfBatch && st._cfBatch[i] ? ' checked' : '';
+    tabsHtml += '<button class="cf-pill' + (i === st._cfSel ? ' active' : '') + '" onclick="cfSelect(' + i + ')" style="position:relative;overflow:visible">'
+      + '<span class="cf-pill-del-badge" onclick="event.stopPropagation();cfDelete(' + i + ')">×</span>'
+      + '<input type="checkbox" class="cf-pill-chk" onclick="event.stopPropagation();cfToggleBatch(' + i + ')"' + checked + '>'
+      + '<span>' + esc(label) + '</span>'
+      + '</button>';
+  });
+
+
+  /* ── 外框 + 表單 ── */
+  var innerHtml;
+  if (!item) {
+    innerHtml = '<div class="cf-form-well"><div class="cf-empty-form">'
+      + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+      + '<div>點擊「新增」建立確認書</div>'
+      + '</div></div>';
+  } else {
+    innerHtml = formHtml;
+  }
+
+  /* Build structure via DOM to avoid HTML parser nesting issues */
+  el.innerHTML = '';
+  var _sw = document.createElement('div'); _sw.className = 'sticky-wrap';
+  var _demoEl = document.createElement('div');
+  _demoEl.innerHTML = demoBannerHtml(); if (_demoEl.firstChild) _sw.appendChild(_demoEl.firstChild);
+  var _fb = document.createElement('div');
+  _fb.className = 'filter-bar'; _fb.style.cssText = 'gap:8px;justify-content:flex-start;overflow:visible;padding:14px 14px 10px;';
+  var _spacer = document.createElement('div'); _spacer.className = 'f-spacer';
+  _fb.innerHTML = tabsHtml;
+  _fb.appendChild(_spacer);
+  if (batchBtn) { var _bb = document.createElement('div'); _bb.innerHTML = batchBtn; _fb.appendChild(_bb.firstChild); }
+  _sw.appendChild(_fb);
+  el.appendChild(_sw);
+  var _cfs = document.createElement('div'); _cfs.className = 'card cf-form-shell';
+  _cfs.innerHTML = innerHtml;
+  el.appendChild(_cfs);
+
+  /* 註冊 Ctrl+V 貼圖 */
+  _cfRegisterPaste();
+}
+
+/* ── 事件處理 ── */
+function cfNew() {
+  var l = _cfLoad(); l.unshift(_cfNewItem()); _cfSave(l);
+  if (!st._cfBatch) st._cfBatch = {};
+  st._cfSel = 0; renderConfirm();
+}
+function cfSelect(i) { st._cfSel = i; renderConfirm(); }
+function cfDelete(i) {
+  var l = _cfLoad(); l.splice(i, 1); _cfSave(l);
+  if (st._cfBatch) delete st._cfBatch[i];
+  if (st._cfSel >= l.length) st._cfSel = l.length - 1;
+  renderConfirm();
+}
+function cfToggleBatch(i) {
+  if (!st._cfBatch) st._cfBatch = {};
+  if (st._cfBatch[i]) delete st._cfBatch[i]; else st._cfBatch[i] = true;
+}
+
+function _cfUpdField(field, value) {
+  var l = _cfLoad(); if (!l[st._cfSel]) return;
+  l[st._cfSel][field] = value; _cfSave(l);
+  var item = l[st._cfSel];
+  /* 更新薪資 */
+  var sb = document.getElementById('cf-sal-box');
+  if (sb) sb.innerHTML = _cfSalaryHTML(_cfCalc(item));
+  /* 更新簡述 */
+  var se = document.getElementById('cf-summary'); if (se) se.textContent = _cfSummaryText(item);
+  /* 更新左側標籤 */
+  var items = document.querySelectorAll('.confirm-item'); var it = items[st._cfSel];
+  if (it) {
+    var roc = _cfRoc(item.origDate);
+    var dStr = roc.y ? roc.y + '/' + String(roc.m).padStart(2,'0') + '/' + String(roc.d).padStart(2,'0') : '—';
+    var nn = it.querySelector('.confirm-item-name'); if (nn) nn.textContent = _cfDisplayStore(item) || '（未填）';
+    var nd = it.querySelector('.confirm-item-date'); if (nd) nd.textContent = (item.workerName || '—') + '　' + dStr;
+  }
+  /* 更新 filter-bar pill 標籤（workerName / origDate 變動時即時反映） */
+  var pills = document.querySelectorAll('.cf-pill');
+  var pill = pills[st._cfSel];
+  if (pill) {
+    var roc2 = _cfRoc(item.origDate);
+    var dStr2 = roc2.y ? roc2.y + '/' + String(roc2.m).padStart(2,'0') + '/' + String(roc2.d).padStart(2,'0') : '';
+    var labelSpan = pill.querySelector('span:last-child');
+    if (labelSpan) labelSpan.textContent = (item.workerName || '（未填）') + (dStr2 ? ' ' + dStr2 : '');
+  }
+  /* 法人切換 → 刷新店鋪 datalist */
+  if (field === 'legalName') cfRefreshStores(value);
+}
+function cfUpdInp(el) { _cfUpdField(el.dataset.field, el.value); }
+function cfUpdChk(el) { _cfUpdField(el.dataset.field, el.checked); }
+
+function cfRefreshStores(legalName) {
+  var dl = document.getElementById('cf-dl-store'); if (dl) {
+    var opts = _cfStoreOptions(legalName);
+    dl.innerHTML = opts.map(function(o) { return '<option value="' + esc(o) + '">'; }).join('');
+  }
+  // also refresh custom combo
+  var dd = document.getElementById('cf-dd-store'); if (!dd) return;
+  var opts2 = _cfStoreOptions(legalName);
+  dd.innerHTML = opts2.map(function(o){return '<div class="cf-combo-option" onmousedown="cfComboSelect(\'store\',\''+esc(o)+'\')">'+esc(o)+'</div>';}).join('');
+}
+
+function cfComboOpen(which) {
+  var dd = document.getElementById('cf-dd-' + which); if (dd) dd.classList.add('open');
+}
+function cfComboBlur(which) {
+  setTimeout(function(){ var dd = document.getElementById('cf-dd-' + which); if (dd) dd.classList.remove('open'); }, 150);
+}
+function cfComboFilter(which, val) {
+  var allOpts = which === 'legal' ? _cfLegals() : _cfStoreOptions(document.getElementById('cf-inp-legal') ? document.getElementById('cf-inp-legal').value : '');
+  var filtered = allOpts.filter(function(o){ return o.toLowerCase().indexOf(val.toLowerCase()) >= 0; });
+  var dd = document.getElementById('cf-dd-' + which); if (!dd) return;
+  dd.innerHTML = filtered.map(function(o){return '<div class="cf-combo-option" onmousedown="cfComboSelect(\''+which+'\',\''+esc(o)+'\')">'+esc(o)+'</div>';}).join('');
+  dd.classList.add('open');
+  // also update field value
+  var inp = document.getElementById('cf-inp-' + which); if (inp) { inp.dataset.field = which === 'legal' ? 'legalName' : 'storeDisplay'; cfUpdInp(inp); }
+  if (which === 'legal') cfRefreshStores(val);
+}
+function cfComboSelect(which, val) {
+  var inp = document.getElementById('cf-inp-' + which); if (!inp) return;
+  inp.value = val;
+  cfUpdInp(inp);
+  if (which === 'legal') cfRefreshStores(val);
+  var dd = document.getElementById('cf-dd-' + which); if (dd) dd.classList.remove('open');
+  setTimeout(function() { cfFocusNext(inp); }, 20);
+}
+
+/* ── 附件 ── */
+function cfAddImgFiles(evt) {
+  var files = [].slice.call(evt.target.files); if (!files.length) return;
+  _cfLoadImages(files); evt.target.value = '';
+}
+function _cfLoadImages(files) {
+  var l = _cfLoad(); if (!l[st._cfSel]) return;
+  var pending = files.length;
+  files.forEach(function(f) {
+    if (!f.type.startsWith('image/')) { pending--; return; }
+    var r = new FileReader();
+    r.onload = function(e) {
+      l[st._cfSel].attachments.push(e.target.result);
+      if (--pending === 0) { _cfSave(l); renderConfirm(); }
+    };
+    r.readAsDataURL(f);
+  });
+}
+function cfDelAttach(idx) {
+  var l = _cfLoad(); if (!l[st._cfSel]) return;
+  l[st._cfSel].attachments.splice(parseInt(idx), 1); _cfSave(l); renderConfirm();
+}
+function cfDragOver(evt) { evt.preventDefault(); evt.dataTransfer.dropEffect = 'copy'; }
+function cfDrop(evt) {
+  evt.preventDefault();
+  var files = [].slice.call(evt.dataTransfer.files).filter(function(f) { return f.type.startsWith('image/'); });
+  if (files.length) _cfLoadImages(files);
+}
+function _cfRegisterPaste() {
+  if (window._cfPasteRegistered) return;
+  window._cfPasteRegistered = true;
+  document.getElementById('pane-confirm').addEventListener('keydown', function(evt) {
+    if (evt.key !== 'Enter' || evt.isComposing) return;
+    if (!evt.target.classList.contains('cf-input')) return;
+    evt.preventDefault();
+    cfFocusNext(evt.target);
+  });
+  document.addEventListener('paste', function(evt) {
+    if (st.activeTab !== 'confirm') return;
+    var items = evt.clipboardData && evt.clipboardData.items;
+    if (!items) return;
+    var imgs = [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        var blob = items[i].getAsFile();
+        if (blob) imgs.push(blob);
+      }
+    }
+    if (imgs.length) { evt.preventDefault(); _cfLoadImages(imgs); }
+  });
+}
+
+/* ── 複製簡述 ── */
+function cfCopy() {
+  var el = document.getElementById('cf-summary'); if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(function() {
+    var b = el.nextElementSibling;
+    if (b) { b.textContent = '已複製！'; setTimeout(function() { b.textContent = '複製'; }, 1500); }
+  });
+}
+
+/* ── 產生 print 視窗 HTML ── */
+function _cfBuildDoc(item, withAttach) {
+  var s = _cfCalc(item);
+  var ro = _cfRoc(item.origDate), rs = _cfRoc(item.signDate);
+  function th(t) { var p = (t || '00:00').split(':'); return [p[0] || '00', p[1] || '00']; }
+  var oS = th(item.origStart), oE = th(item.origEnd);
+  var aS = th(item.adjStart), aE = th(item.adjEnd);
+  var e2 = function(v) { return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  var storeName = _cfDisplayStore(item);
+  var attachHtml = '';
+  if (withAttach && item.attachments && item.attachments.length) {
+    var cnt = item.attachments.length;
+    var cols = cnt <= 1 ? 1 : cnt <= 4 ? 2 : 3;
+    var maxH = cnt <= 1 ? '240mm' : cnt <= 4 ? '115mm' : '75mm';
+    var imgs = item.attachments.map(function(src) {
+      return '<img src="' + src + '" style="width:100%;height:' + maxH + ';object-fit:contain;">';
+    }).join('');
+    attachHtml = '<div style="page-break-before:always;padding:10mm;box-sizing:border-box;display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:8px;align-items:start;">' + imgs + '</div>';
+  }
+  /* PDF 檔名：店鋪分店名_調整工時確認書(姓名)_西元年月日 */
+  var isoDate = item.origDate ? item.origDate.replace(/-/g,'') : '';
+  var title = e2(storeName) + '_調整工時確認書(' + e2(item.workerName || '') + ')_' + isoDate;
+  return '<!DOCTYPE html><html lang="zh-TW"><head><meta charset="UTF-8"><title>' + title + '</title>'
+    + '<style>'
+    + 'body{font-family:"標楷體","BiauKai","DFKai-SB","Microsoft JhengHei",serif;font-size:13pt;line-height:1.9;color:#000;margin:0}'
+    + '.page{width:210mm;min-height:297mm;margin:0 auto;padding:18mm 20mm 15mm;box-sizing:border-box}'
+    + 'h1{text-align:center;font-size:17pt;margin-bottom:1.2em;letter-spacing:.5em}'
+    + 'p{margin:0 0 .6em;text-indent:2em;line-height:1.9}'
+    + '.item{margin:0 0 .6em;line-height:1.9;padding-left:3em;text-indent:-1em}'
+    + '.sig{margin-top:1.5em}'
+    + '@media print{body{margin:0}@page{margin:0;size:A4}}'
+    + '</style></head><body>'
+    + '<div class="page">'
+    + '<h1>確認書</h1>'
+    + '<p>茲本公司：' + e2(item.legalName) + '（以下簡稱本公司），於沃祈數位科技股份有限公司（以下簡稱沃祈數位公司）所屬的 WORKY 人力平台（以下簡稱 WORKY）刊登招募人員工作，並與媒合成功之打工會員線下合意調整工作工時，且工作皆已執行完畢，為利 WORKY 先代本公司給付薪資事宜，故確認以下事宜：</p>'
+    + '<p>一、工作內容：（時薪 ' + e2(item.hourly) + ' 元）</p>'
+    + '<p class="item">1、工作地點：' + e2(storeName) + '：' + e2(item.address) + '</p>'
+    + '<p class="item">2、原訂工作時間：民國 ' + (ro.y || '　') + ' 年 ' + (ro.m || '　') + ' 月 ' + (ro.d || '　') + ' 日 ' + oS[0] + ' 時 ' + oS[1] + ' 分至 ' + oE[0] + ' 時 ' + oE[1] + ' 分（休息 ' + e2(item.origBreak || '0') + ' 分鐘）。</p>'
+    + '<p class="item">3、調整工作時間：民國 ' + (ro.y || '　') + ' 年 ' + (ro.m || '　') + ' 月 ' + (ro.d || '　') + ' 日 ' + aS[0] + ' 時 ' + aS[1] + ' 分至 ' + aE[0] + ' 時 ' + aE[1] + ' 分（休息 ' + e2(item.adjBreak || '0') + ' 分鐘）。</p>'
+    + '<p class="item">4、工作人員名字：' + e2(item.workerName) + '</p>'
+    + '<p class="item">5、應給付薪資之總實際金額（含延長工時薪資以及扣除勞保自付額）：新臺幣 ' + (s.final > 0 ? s.final.toLocaleString() : '　　') + ' 元。</p>'
+    + '<p>二、本公司確認以上資訊無誤，委由沃祈數位公司依雙方所簽署的「委託人力招募合作合約書」之約定，依以上資訊先代本公司支付該工作人員薪資後，本公司再依約定期限返還沃祈數位公司相關薪資總額。</p>'
+    + '<div class="sig"><p style="text-indent:0">此致 沃祈數位科技股份有限公司</p></div>'
+    + '<div class="sig"><p style="text-indent:0">確認人：' + e2(item.legalName) + '</p></div>'
+    + (function(){
+        var lbl = 'flex:none;padding:0 4px;';
+        function group(v, slots) {
+          var chars = (v||'').toString().split('');
+          var spans = chars.map(function(c){ return '<span style="flex:1;text-align:center;">'+c+'</span>'; }).join('');
+          var w = (slots * 46) + 'px';
+          return '<div style="display:flex;flex:none;width:'+w+';justify-content:space-evenly;">' + spans + '</div>';
+        }
+        return '<div style="text-indent:0;margin-top:2.5em;display:flex;align-items:center;justify-content:space-between;width:100%;">'
+          + '<span style="'+lbl+'">民</span>'
+          + '<span style="'+lbl+'">國</span>'
+          + group(rs.y, 3)
+          + '<span style="'+lbl+'">年</span>'
+          + group(rs.m, 2)
+          + '<span style="'+lbl+'">月</span>'
+          + group(rs.d, 2)
+          + '<span style="'+lbl+'">日</span>'
+          + '</div>';
+      })()
+    + '</div>'
+    + attachHtml
+    + '</body></html>';
+}
+
+function _cfOpenPrint(item) {
+  var win = window.open('', '_blank');
+  if (!win) { showAlert({ title: '彈出視窗被封鎖', body: '請允許本網站的彈出視窗，或至瀏覽器設定中解除封鎖。', tone: 'warning' }); return null; }
+  win.document.write(_cfBuildDoc(item, true));
+  win.document.close();
+  setTimeout(function() { win.print(); }, 400);
+  return win;
+}
+
+/* ── 列印單份 ── */
+function cfPrintOne() {
+  var l = _cfLoad(); var item = l[st._cfSel]; if (!item) return;
+  _cfOpenPrint(item);
+}
+
+/* ── 批次下載（逐份手動觸發，避免 Chrome popup 封鎖） ── */
+function cfBatchPrint() {
+  var l = _cfLoad();
+  var batch = st._cfBatch || {};
+  var indices = Object.keys(batch).filter(function(k) { return batch[k]; }).map(Number).sort(function(a,b){return a-b;});
+  if (indices.length === 0) {
+    showAlert({ title: '尚未勾選', body: '請先勾選左側清單中要下載的確認書', tone: 'info' });
+    return;
+  }
+  st._cfQueue = indices.slice();
+  st._cfQTotal = indices.length;
+  _cfBatchNext();
+}
+function _cfBatchNext() {
+  var q = st._cfQueue;
+  if (!q || q.length === 0) { _cfBatchBarRemove(); return; }
+  var l = _cfLoad();
+  var idx = q.shift();
+  var item = l[idx];
+  if (item) _cfOpenPrint(item);
+  var done = st._cfQTotal - q.length;
+  _cfBatchBarUpdate(done, st._cfQTotal, q.length > 0);
+}
+function _cfBatchBarUpdate(done, total, hasMore) {
+  var bar = document.getElementById('cf-batch-bar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'cf-batch-bar';
+    document.body.appendChild(bar);
+  }
+  var btnStyle = '', closeStyle = '';
+  if (hasMore) {
+    bar.innerHTML = '<span>批次下載 ' + done + ' / ' + total + ' 份</span>'
+      + '<button class="cf-bar-next" onclick="_cfBatchNext()">繼續下一份 →</button>'
+      + '<button class="cf-bar-close" onclick="_cfBatchBarRemove()">×</button>';
+  } else {
+    bar.innerHTML = '<span>✓ 全部 ' + total + ' 份下載完成</span>'
+      + '<button class="cf-bar-close" onclick="_cfBatchBarRemove()">×</button>';
+  }
+}
+function _cfBatchBarRemove() {
+  var bar = document.getElementById('cf-batch-bar');
+  if (bar) bar.remove();
+  st._cfQueue = null;
 }
 
 </script>
