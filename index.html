@@ -4321,7 +4321,9 @@ function _cfDatalist(id, options) {
 /* ── 薪資 HTML ── */
 function _cfSalaryHTML(sal) {
   if (!sal) return '';
+  var overLimit = sal.net > 720;
   return '<div class="cf-salary-box">'
+    + (overLimit ? '<div class="cf-salary-row" style="color:var(--pink);font-weight:600;justify-content:center;">⚠ 淨工時已超過 12 小時（含加班上限）！</div>' : '')
     + '<div class="cf-salary-row"><span class="lbl">基本薪（' + _cfFmtH(Math.min(sal.net, 480)) + '）</span><span class="val">$ ' + _cfFmtMoney(sal.base) + '</span></div>'
     + (sal.ot1p > 0 ? '<div class="cf-salary-row"><span class="lbl">加班費（8–10H ×1.34）</span><span class="val">$ ' + _cfFmtMoney(sal.ot1p) + '</span></div>' : '')
     + (sal.ot2p > 0 ? '<div class="cf-salary-row"><span class="lbl">加班費（10–12H ×1.67）</span><span class="val">$ ' + _cfFmtMoney(sal.ot2p) + '</span></div>' : '')
@@ -4773,6 +4775,10 @@ function _cfOpenPrint(item) {
 /* ── 列印單份 ── */
 function cfPrintOne() {
   var l = _cfLoad(); var item = l[st._cfSel]; if (!item) return;
+  if (_cfCalc(item).net > 720) {
+    showAlert({ title: '無法下載', body: '淨工時已超過 12 小時（含加班上限）！', tone: 'warning' });
+    return;
+  }
   _cfOpenPrint(item);
 }
 
@@ -4785,8 +4791,17 @@ function cfBatchPrint() {
     showAlert({ title: '尚未勾選', body: '請先勾選左側清單中要下載的確認書', tone: 'info' });
     return;
   }
-  st._cfQueue = indices.slice();
-  st._cfQTotal = indices.length;
+  var blocked = indices.filter(function(i) { return l[i] && _cfCalc(l[i]).net > 720; });
+  var valid   = indices.filter(function(i) { return !l[i] || _cfCalc(l[i]).net <= 720; });
+  if (blocked.length > 0 && valid.length === 0) {
+    showAlert({ title: '無法下載', body: '勾選的確認書有淨工時已超過 12 小時<br>（含加班上限）！', tone: 'warning' });
+    return;
+  }
+  if (blocked.length > 0) {
+    showAlert({ title: '部分略過', body: '有 ' + blocked.length + ' 份確認書淨工時超過 12 小時，已略過，僅下載其餘 ' + valid.length + ' 份。', tone: 'warning' });
+  }
+  st._cfQueue = valid.slice();
+  st._cfQTotal = valid.length;
   _cfBatchNext();
 }
 function _cfBatchNext() {
