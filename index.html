@@ -4229,6 +4229,7 @@ function cfTimeInput(el) {
 
 /* ── 淨工時計算（支援跨日） ── */
 function _cfNetMins(start, end, breakMins) {
+  if (!(start || '').trim() || !(end || '').trim()) return 0;
   var s = _cfParseTime(start);
   var e = _cfParseTime(end);
   var tot = e - s;
@@ -4319,9 +4320,10 @@ function _cfDatalist(id, options) {
 }
 
 /* ── 薪資 HTML ── */
-function _cfSalaryHTML(sal) {
+function _cfSalaryHTML(sal, overCount) {
   if (!sal) return '';
   var overLimit = sal.net > 720;
+  var n = overCount || 0;
   return '<div class="cf-salary-box">'
     + (overLimit ? '<div class="cf-salary-row" style="color:var(--pink);font-weight:600;justify-content:center;">⚠ 淨工時已超過 12 小時（含加班上限）！</div>' : '')
     + '<div class="cf-salary-row"><span class="lbl">基本薪（' + _cfFmtH(Math.min(sal.net, 480)) + '）</span><span class="val">$ ' + _cfFmtMoney(sal.base) + '</span></div>'
@@ -4456,7 +4458,7 @@ function renderConfirm() {
       + '</div></div>' /* close main form-scroll+well */
       + '<div class="cf-salary-well">'
       + '<div class="cf-section-title">薪資計算</div>'
-      + '<div id="cf-sal-box">' + _cfSalaryHTML(sal) + '</div>'
+      + '<div id="cf-sal-box">' + _cfSalaryHTML(sal, list.filter(function(it){ return _cfCalc(it).net > 720; }).length) + '</div>'
       + '</div>'
       + '<div class="cf-form-well"><div class="cf-form-scroll"><div class="cf-form-inner">'
 
@@ -4572,7 +4574,7 @@ function _cfUpdField(field, value) {
   var item = l[st._cfSel];
   /* 更新薪資 */
   var sb = document.getElementById('cf-sal-box');
-  if (sb) sb.innerHTML = _cfSalaryHTML(_cfCalc(item));
+  if (sb) sb.innerHTML = _cfSalaryHTML(_cfCalc(item), l.filter(function(it){ return _cfCalc(it).net > 720; }).length);
   /* 更新簡述 */
   var se = document.getElementById('cf-summary'); if (se) se.textContent = _cfSummaryText(item);
   /* 更新左側標籤 */
@@ -4798,7 +4800,7 @@ function cfBatchPrint() {
     return;
   }
   if (blocked.length > 0) {
-    showAlert({ title: '部分略過', body: '有 ' + blocked.length + ' 份確認書淨工時超過 12 小時，已略過，僅下載其餘 ' + valid.length + ' 份。', tone: 'warning' });
+    showAlert({ title: '部分略過', body: '有 ' + blocked.length + ' 份確認書淨工時超過 12 小時未下載。', tone: 'warning' });
   }
   st._cfQueue = valid.slice();
   st._cfQTotal = valid.length;
