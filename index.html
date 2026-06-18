@@ -4167,7 +4167,14 @@ function closeTweaks() {
 var CONFIRM_KEY = 'worky_confirm_v2';
 
 function _cfLoad() {
-  try { return JSON.parse(localStorage.getItem(CONFIRM_KEY) || '[]'); } catch(e) { return []; }
+  try {
+    var list = JSON.parse(localStorage.getItem(CONFIRM_KEY) || '[]');
+    list.forEach(function(item) {
+      item.origStart = ''; item.origEnd = '';
+      item.adjStart  = ''; item.adjEnd  = '';
+    });
+    return list;
+  } catch(e) { return []; }
 }
 function _cfSave(list) {
   try { localStorage.setItem(CONFIRM_KEY, JSON.stringify(list)); }
