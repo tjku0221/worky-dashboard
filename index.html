@@ -4170,8 +4170,8 @@ function _cfLoad() {
   try {
     var list = JSON.parse(localStorage.getItem(CONFIRM_KEY) || '[]');
     list.forEach(function(item) {
-      item.origStart = ''; item.origEnd = '';
-      item.adjStart  = ''; item.adjEnd  = '';
+      item.origStart = ''; item.origEnd = ''; item.origBreak = '0';
+      item.adjStart  = ''; item.adjEnd  = ''; item.adjBreak  = '0';
     });
     return list;
   } catch(e) { return []; }
@@ -4579,6 +4579,11 @@ function _cfUpdField(field, value) {
   var l = _cfLoad(); if (!l[st._cfSel]) return;
   l[st._cfSel][field] = value; _cfSave(l);
   var item = l[st._cfSel];
+  /* 從 DOM 讀取時間欄位，確保即時薪資計算正確（不受 _cfLoad 清空影響） */
+  ['adjStart','adjEnd','adjBreak','origStart','origEnd','origBreak'].forEach(function(f) {
+    var el = document.querySelector('[data-field="' + f + '"]');
+    if (el) item[f] = el.value;
+  });
   /* 更新薪資 */
   var sb = document.getElementById('cf-sal-box');
   if (sb) sb.innerHTML = _cfSalaryHTML(_cfCalc(item), l.filter(function(it){ return _cfCalc(it).net > 720; }).length);
