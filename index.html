@@ -4171,9 +4171,11 @@ function _cfLoad() {
   try {
     var list = JSON.parse(localStorage.getItem(CONFIRM_KEY) || '[]');
     if (!_cfTimesCleared) {
+      var today = new Date().toISOString().slice(0, 10);
       list.forEach(function(item) {
         item.origStart = ''; item.origEnd = '';
         item.adjStart  = ''; item.adjEnd  = '';
+        item.signDate  = today;
       });
       _cfTimesCleared = true;
     }
