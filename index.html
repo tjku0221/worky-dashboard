@@ -4166,13 +4166,17 @@ function closeTweaks() {
 ══════════════════════════════════════════ */
 var CONFIRM_KEY = 'worky_confirm_v2';
 
+var _cfTimesCleared = false;
 function _cfLoad() {
   try {
     var list = JSON.parse(localStorage.getItem(CONFIRM_KEY) || '[]');
-    list.forEach(function(item) {
-      item.origStart = ''; item.origEnd = ''; item.origBreak = '0';
-      item.adjStart  = ''; item.adjEnd  = ''; item.adjBreak  = '0';
-    });
+    if (!_cfTimesCleared) {
+      list.forEach(function(item) {
+        item.origStart = ''; item.origEnd = '';
+        item.adjStart  = ''; item.adjEnd  = '';
+      });
+      _cfTimesCleared = true;
+    }
     return list;
   } catch(e) { return []; }
 }
