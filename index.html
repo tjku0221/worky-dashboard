@@ -2533,6 +2533,7 @@ const E = {
 };
 
 const STORAGE_KEY = 'worky_merchants_v1';
+const HIDDEN_KEY  = 'worky_overview_hidden_v1';
 
 const st = {
   merchants: [], apps: [], orders: [],
@@ -2545,8 +2546,21 @@ const st = {
   reviewChecked: new Set(),
   _overviewGroups: [],
   _lastPending: [],
+  hiddenMerchants: new Set(),
   isDemo: false,
 };
+
+// 申請總覽商家篩選：被隱藏的「公司|||分店」鍵
+function mKey(company, branch) { return company + '|||' + branch; }
+function loadHiddenMerchants() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]');
+    st.hiddenMerchants = new Set(Array.isArray(saved) ? saved : []);
+  } catch (e) { st.hiddenMerchants = new Set(); }
+}
+function saveHiddenMerchants() {
+  localStorage.setItem(HIDDEN_KEY, JSON.stringify([...st.hiddenMerchants]));
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Demo data (auto-loaded so design is reviewable without real CSVs)
@@ -2726,6 +2740,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // load demo if nothing was loaded
   if (!st.merchants.length) loadDemoData();
+
+  loadHiddenMerchants();
 
   initTweaks();
   initClock();
@@ -3091,6 +3107,7 @@ function render() {
   // count badges
   const overviewCnt = st.apps.filter(a => {
     if (!a._mine || str(a['狀態']) !== '打工夥伴申請') return false;
+    if (st.hiddenMerchants.size && st.hiddenMerchants.has(mKey(a._company, a._branch))) return false;
     if (st.f.from && a._workDate < st.f.from) return false;
     if (st.f.to   && a._workDate > st.f.to)   return false;
     return true;
@@ -3256,6 +3273,8 @@ function renderOverview() {
   if (!st.apps.length)       { el.innerHTML=empty('folder','尚未匯入申請','請上傳工作申請資料'); return; }
 
   let data = st.apps.filter(a => a._mine && str(a['狀態']) === '打工夥伴申請');
+  // 店鋪設定的商家篩選：略過被隱藏的商家
+  if (st.hiddenMerchants.size) data = data.filter(a => !st.hiddenMerchants.has(mKey(a._company, a._branch)));
   if (st.f.from) data = data.filter(a => a._workDate>=st.f.from);
   if (st.f.to)   data = data.filter(a => a._workDate<=st.f.to);
   data.sort((a,b) => a._workDate.localeCompare(b._workDate));
@@ -3677,6 +3696,37 @@ function renderCancel() {
 /* ═══════════════════════════════════════════════════════════════════════════
    Settings pane
    ─────────────────────────────────────────────────────────────────────────── */
+// 眼睛圖示（visible=true 亮眼／false 關閉斜線眼）
+function eyeIcon(visible) {
+  return visible
+    ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>'
+    : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+}
+// onclick 字串參數的安全跳脫
+function jsq(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+
+function toggleMerchantVisible(company, branch) {
+  const k = mKey(company, branch);
+  if (st.hiddenMerchants.has(k)) st.hiddenMerchants.delete(k); else st.hiddenMerchants.add(k);
+  saveHiddenMerchants();
+  render();
+}
+function toggleCompanyVisible(company) {
+  const branches = st.merchants.filter(m => m.company === company);
+  const allHidden = branches.every(m => st.hiddenMerchants.has(mKey(m.company, m.branch)));
+  branches.forEach(m => {
+    const k = mKey(m.company, m.branch);
+    if (allHidden) st.hiddenMerchants.delete(k); else st.hiddenMerchants.add(k);
+  });
+  saveHiddenMerchants();
+  render();
+}
+function showAllMerchants() {
+  st.hiddenMerchants.clear();
+  saveHiddenMerchants();
+  render();
+}
+
 function renderSettings() {
   const el = document.getElementById('pane-settings');
 
@@ -3721,21 +3771,31 @@ function renderSettings() {
     return `<span class="chip gray chip-fixed">${esc(fmt)}</span>`;
   };
 
+  const hiddenTotal = st.merchants.filter(m => st.hiddenMerchants.has(mKey(m.company, m.branch))).length;
+
   const tbodies = groups.map(([company, branches]) => {
-    const dataRows = branches.map(m => `<tr>
-      <td style="font-weight:600;color:var(--t1)">${esc(m.branch)}</td>
+    const dataRows = branches.map(m => {
+      const hidden = st.hiddenMerchants.has(mKey(m.company, m.branch));
+      return `<tr style="${hidden?'opacity:.42':''}">
+      <td style="text-align:center;cursor:pointer;width:56px" title="${hidden?'已隱藏，點擊顯示':'顯示中，點擊隱藏'}" onclick="toggleMerchantVisible('${jsq(m.company)}','${jsq(m.branch)}')">${eyeIcon(!hidden)}</td>
+      <td style="font-weight:600;color:var(--t1);${hidden?'text-decoration:line-through':''}">${esc(m.branch)}</td>
       <td><span class="chip ${m.hasSched?'green':'gray'} chip-fixed">${m.hasSched?'Yes':'No'}</span></td>
       <td>${fmtChip(m.fmt)}</td>
-    </tr>`).join('');
+    </tr>`;
+    }).join('');
+    const hiddenCnt = branches.filter(m => st.hiddenMerchants.has(mKey(m.company, m.branch))).length;
+    const allHidden = hiddenCnt === branches.length && branches.length > 0;
     return `<tbody>
       <tr class="grp-head">
-        <td colspan="3"><div class="grp-title-row">
+        <td colspan="4"><div class="grp-title-row">
+          <span title="${allHidden?'整間已隱藏，點擊全部顯示':'點擊隱藏整間公司'}" style="cursor:pointer;display:inline-flex;align-items:center" onclick="toggleCompanyVisible('${jsq(company)}')">${eyeIcon(!allHidden)}</span>
           <span class="grp-title">${esc(company)}</span>
           <span class="badge">${branches.length} 間</span>
+          ${hiddenCnt?`<span class="badge gray">已隱藏 ${hiddenCnt}</span>`:''}
         </div></td>
       </tr>
       <tr>
-        <th>分店名稱</th><th>雲端班表</th><th>班表格式</th>
+        <th style="width:56px;text-align:center">顯示</th><th>分店名稱</th><th>雲端班表</th><th>班表格式</th>
       </tr>
       ${dataRows}
     </tbody>`;
@@ -3746,9 +3806,10 @@ function renderSettings() {
       ${demoBannerHtml()}
       <div class="filter-bar">
         <span class="f-title">店鋪設定</span>
-        <span class="f-sub">${st.merchants.length} 間店鋪 ・ ${groups.length} 家公司</span>
+        <span class="f-sub">${st.merchants.length} 間店鋪 ・ ${groups.length} 家公司${hiddenTotal?` ・ <span style="color:var(--gold)">已隱藏 ${hiddenTotal} 間</span>`:''}</span>
         <div class="f-spacer"></div>
         <div class="f-actions">
+          ${hiddenTotal?`<button class="btn compact" onclick="showAllMerchants()">全部顯示</button>`:''}
           <button class="btn compact" onclick="exportMerchantsXLSX()">匯出 Excel</button>
           <button class="btn compact danger" onclick="clearMerchants()">清除設定</button>
         </div>
