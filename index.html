@@ -2918,11 +2918,14 @@ function launchPlugin() {
     try {
       chrome.runtime.sendMessage(EXT_ID, { action: 'open' }, () => {
         if (chrome.runtime.lastError) {
-          showAlert({ title: '無法啟動報表小助手', body: '請確認已安裝並啟用「Worky 報表小助手」擴充功能。', tone: 'warning' });
+          showAlert({ title: '無法啟動報表小助手', body: '請確認已安裝並啟用「Worky 報表小助手」擴充功能。<br><br>若剛重新載入插件，請重新整理此頁面再試一次。', tone: 'warning' });
         }
       });
       return;
-    } catch (e) {}
+    } catch (e) {
+      showAlert({ title: '無法啟動報表小助手', body: '請確認已安裝並啟用「Worky 報表小助手」擴充功能。<br><br>若剛重新載入插件，請重新整理此頁面再試一次。', tone: 'warning' });
+      return;
+    }
   }
   showAlert({
     title: '啟動報表小助手',
