@@ -2550,7 +2550,6 @@ const st = {
   activeTab: 'summary',
   f: { from: '', to: '' },
   fc: { from: '', to: '' },
-  fp: { from: '', to: '' },
   cancelChecked: new Set(),
   _cancelGroups: [],
   checked: new Set(),
@@ -3162,8 +3161,8 @@ function render() {
   const pendingPayCnt = pendingPaySet.size ? st.apps.filter(a => {
     if (!a._mine || str(a['狀態']) !== '商家同意') return false;
     if (st.hiddenMerchants.size && st.hiddenMerchants.has(mKey(a._company, a._branch))) return false;
-    if (st.fp.from && a._workDate < st.fp.from) return false;
-    if (st.fp.to   && a._workDate > st.fp.to)   return false;
+    if (st.f.from && a._workDate < st.f.from) return false;
+    if (st.f.to   && a._workDate > st.f.to)   return false;
     if (!appOrderNumCol) return false;
     return pendingPaySet.has(cleanId(a[appOrderNumCol] || ''));
   }).length : 0;
@@ -3420,7 +3419,6 @@ function renderOverview() {
 
 function applyFilter(key, val) { st.f[key]=val; render(); }
 function applyCancelFilter(key, val) { st.fc[key]=val; render(); }
-function applyPendingPayFilter(key, val) { st.fp[key]=val; render(); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Pending payment pane — 一般商家已媒合但尚未付款
@@ -3438,8 +3436,8 @@ function renderPendingPay() {
     ? st.apps.filter(a => a._mine && str(a['狀態']) === '商家同意' && pendingPaySet.has(cleanId(a[appOrderNumCol] || '')))
     : [];
   if (st.hiddenMerchants.size) data = data.filter(a => !st.hiddenMerchants.has(mKey(a._company, a._branch)));
-  if (st.fp.from) data = data.filter(a => a._workDate>=st.fp.from);
-  if (st.fp.to)   data = data.filter(a => a._workDate<=st.fp.to);
+  if (st.f.from) data = data.filter(a => a._workDate>=st.f.from);
+  if (st.f.to)   data = data.filter(a => a._workDate<=st.f.to);
   data.sort((a,b) => a._workDate.localeCompare(b._workDate));
 
   const groupMap = new Map();
@@ -3456,14 +3454,14 @@ function renderPendingPay() {
   const filterBarInner = `
     <div class="filter-bar">
       <span class="f-label">工作日期</span>
-      <button type="button" class="date-trigger ${st.fp.from?'':'date-empty'}" style="width:136px" onclick="datePicker.open(this, 'from', 'fp')">
+      <button type="button" class="date-trigger ${st.f.from?'':'date-empty'}" style="width:136px" onclick="datePicker.open(this, 'from')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>${st.fp.from ? esc(st.fp.from.replace(/-/g,' / ')) : '開始日期'}</span>
+        <span>${st.f.from ? esc(st.f.from.replace(/-/g,' / ')) : '開始日期'}</span>
       </button>
       <span class="f-range-sep">→</span>
-      <button type="button" class="date-trigger ${st.fp.to?'':'date-empty'}" style="width:136px" onclick="datePicker.open(this, 'to', 'fp')">
+      <button type="button" class="date-trigger ${st.f.to?'':'date-empty'}" style="width:136px" onclick="datePicker.open(this, 'to')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>${st.fp.to ? esc(st.fp.to.replace(/-/g,' / ')) : '結束日期'}</span>
+        <span>${st.f.to ? esc(st.f.to.replace(/-/g,' / ')) : '結束日期'}</span>
       </button>
       <span class="f-summary">共 <b>${data.length}</b> 筆 ／ <b>${st._pendingPayGroups.length}</b> 個店鋪</span>
     </div>`;
