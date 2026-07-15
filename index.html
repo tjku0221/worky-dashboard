@@ -889,6 +889,12 @@ body::after {
     inset 0 -1px 0 rgba(0,0,0,0.3),
     inset 0 0 0 1px rgba(244,197,118,0.18);
 }
+.pay-warn {
+  color: var(--pink);
+  font-weight: 700;
+  margin-left: 4px;
+  cursor: help;
+}
 .chip.green {
   background: linear-gradient(180deg, rgba(74,222,128,0.10), rgba(74,222,128,0.02));
   color: var(--green);
@@ -3279,6 +3285,29 @@ function renderOverview() {
   if (st.f.to)   data = data.filter(a => a._workDate<=st.f.to);
   data.sort((a,b) => a._workDate.localeCompare(b._workDate));
 
+  // 一般商家未付款標記：工作單管理報表「渠道方(金流)訂單編號」非空白 且「付款狀態」= 等待付款，靠工單編號對應到申請總覽
+  const pendingPaySet = new Set();
+  if (st.orders.length) {
+    const osample = st.orders[0];
+    const ocol = k => Object.keys(osample).find(h => h.includes(k));
+    const ordNumColO = ocol('工單編號') || ocol('工單號碼') || ocol('工作單號碼') || ocol('工作編號');
+    const channelCol = ocol('渠道方');
+    const payStatCol = ocol('付款狀態');
+    if (ordNumColO && channelCol && payStatCol) {
+      st.orders.forEach(row => {
+        const wn = cleanId(row[ordNumColO] || '');
+        if (!wn) return;
+        if (str(row[channelCol]) !== '' && str(row[payStatCol]) === '等待付款') pendingPaySet.add(wn);
+      });
+    }
+  }
+  const appOrderNumCol = (() => {
+    if (!st.apps.length) return '';
+    const asample = st.apps[0];
+    const acol = k => Object.keys(asample).find(h => h.includes(k));
+    return acol('工單編號') || acol('工單號碼') || acol('工作單號碼') || acol('工作編號');
+  })();
+
   const groupMap = new Map();
   data.forEach(a => {
     const key = a._company+'|||'+a._branch;
@@ -3316,10 +3345,12 @@ function renderOverview() {
       const allChk = ids.length>0 && cnt===ids.length;
       const dataRows = g.rows.map((a, ri) => {
         const appTime = a['打工夥伴申請']||a['打工夥伴申請時間']||'-';
+        const wn = appOrderNumCol ? cleanId(a[appOrderNumCol]||'') : '';
+        const pending = wn && pendingPaySet.has(wn);
         return `<tr>
           <td class="chk-td"><input type="checkbox" ${st.checked.has(a._id)?'checked':''} onchange="toggleCheck(${gi},${ri})"></td>
           <td><span class="mono">${esc(cleanId(a['登入帳號']||''))}</span></td>
-          <td style="color:var(--t1);font-weight:500">${esc(a['打工者姓名']||'-')}</td>
+          <td style="color:var(--t1);font-weight:500">${esc(a['打工者姓名']||'-')}${pending?' <span class="pay-warn" title="一般商家，尚未付款，請提醒商家">⚠</span>':''}</td>
           <td style="color:var(--t2)">${esc(a['工作類型']||'-')}</td>
           <td style="color:var(--t2)">${esc(a['工作時間']||'-')}</td>
           <td style="color:var(--t2)">${esc(appTime)}</td>
