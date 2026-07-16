@@ -3910,13 +3910,11 @@ function renderSettings() {
     groupMap.get(m.company).push(m);
   });
 
-  // 分店內排序：有班表優先(tier 0) → 品牌（備註）→ 分店名
+  // 分店內排序：有班表優先(tier 0) → 分店名（brand 欄位現作備註自由填寫用，不參與排序）
   groupMap.forEach(branches => {
     branches.sort((a, b) => {
       const ta = a.hasSched ? 0 : 1, tb = b.hasSched ? 0 : 1;
       if (ta !== tb) return ta - tb;
-      const ba = a.brand || '', bb = b.brand || '';
-      if (ba !== bb) return ba < bb ? -1 : 1;
       return a.branch < b.branch ? -1 : a.branch > b.branch ? 1 : 0;
     });
   });
