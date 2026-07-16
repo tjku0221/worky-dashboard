@@ -3949,13 +3949,14 @@ function renderSettings() {
       <td style="font-weight:600;color:var(--t1);${hidden?'text-decoration:line-through':''}">${esc(m.branch)}</td>
       <td><span class="chip ${m.hasSched?'green':'gray'} chip-fixed">${m.hasSched?'Yes':'No'}</span></td>
       <td>${fmtChip(m.fmt)}</td>
+      <td style="color:var(--t2);max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(m.brand||'')}">${esc(m.brand||'')}</td>
     </tr>`;
     }).join('');
     const hiddenCnt = branches.filter(m => st.hiddenMerchants.has(mKey(m.company, m.branch))).length;
     const allHidden = hiddenCnt === branches.length && branches.length > 0;
     return `<tbody>
       <tr class="grp-head">
-        <td colspan="4"><div class="grp-title-row">
+        <td colspan="5"><div class="grp-title-row">
           <span title="${allHidden?'整間已隱藏，點擊全部顯示':'點擊隱藏整間公司'}" style="cursor:pointer;display:inline-flex;align-items:center" onclick="toggleCompanyVisible('${jsq(company)}')">${eyeIcon(!allHidden)}</span>
           <span class="grp-title">${esc(company)}</span>
           <span class="badge">${branches.length} 間</span>
@@ -3963,7 +3964,7 @@ function renderSettings() {
         </div></td>
       </tr>
       <tr>
-        <th style="width:56px;text-align:center">顯示</th><th>分店名稱</th><th>雲端班表</th><th>班表格式</th>
+        <th style="width:56px;text-align:center">顯示</th><th style="width:280px">分店名稱</th><th style="width:200px">雲端班表</th><th style="width:200px">班表格式</th><th>備註</th>
       </tr>
       ${dataRows}
     </tbody>`;
