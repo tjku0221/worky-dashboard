@@ -4532,7 +4532,10 @@ function _cfSummaryText(item) {
   if (ot2 > 0)  parts.push(_cfFmtH(ot2) + ' × ' + h + ' × 1.67');
   var expr = parts.join(' + ') || '—';
   if (insur > 0) expr += ' − ' + insur;
-  return storeName + '：' + dateStr + ' ' + expr + ' = ' + (s.final > 0 ? s.final.toLocaleString() : '—') + ' 元';
+  var timeNote = (item.adjStart || item.adjEnd)
+    ? '（調整後 ' + (item.adjStart || '—') + '-' + (item.adjEnd || '—') + '，休息' + (parseFloat(item.adjBreak) || 0) + '分鐘）'
+    : '';
+  return storeName + '：' + dateStr + ' ' + expr + ' = ' + (s.final > 0 ? s.final.toLocaleString() : '—') + ' 元' + timeNote;
 }
 
 /* ── 商家資料 ── */
