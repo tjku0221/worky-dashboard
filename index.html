@@ -4956,6 +4956,22 @@ function _cfBuildDoc(item, withAttach) {
   function th(t) { var p = (t || '00:00').split(':'); return [p[0] || '00', p[1] || '00']; }
   var oS = th(item.origStart), oE = th(item.origEnd);
   var aS = th(item.adjStart), aE = th(item.adjEnd);
+  function addDays(iso, days) {
+    if (!iso) return iso;
+    var d = new Date(iso + 'T00:00:00');
+    d.setDate(d.getDate() + days);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  /* 跨日判斷：結束時間 <= 開始時間 視為隔天，回傳結束日期前綴文字（未跨日則為空字串） */
+  function endDatePrefix(startRaw, endRaw) {
+    var sTrim = (startRaw || '').trim(), eTrim = (endRaw || '').trim();
+    if (!sTrim || !eTrim) return '';
+    if (_cfParseTime(eTrim) > _cfParseTime(sTrim)) return '';
+    var roEnd = _cfRoc(addDays(item.origDate, 1));
+    return '民國 ' + (roEnd.y || '　') + ' 年 ' + (roEnd.m || '　') + ' 月 ' + (roEnd.d || '　') + ' 日 ';
+  }
+  var oEndPrefix = endDatePrefix(item.origStart, item.origEnd);
+  var aEndPrefix = endDatePrefix(item.adjStart, item.adjEnd);
   var e2 = function(v) { return String(v || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   var storeName = _cfDisplayStore(item);
   var attachHtml = '';
@@ -4986,8 +5002,8 @@ function _cfBuildDoc(item, withAttach) {
     + '<p>茲本公司：' + e2(item.legalName) + '（以下簡稱本公司），於沃祈數位科技股份有限公司（以下簡稱沃祈數位公司）所屬的 WORKY 人力平台（以下簡稱 WORKY）刊登招募人員工作，並與媒合成功之打工會員線下合意調整工作工時，且工作皆已執行完畢，為利 WORKY 先代本公司給付薪資事宜，故確認以下事宜：</p>'
     + '<p>一、工作內容：（時薪 ' + e2(item.hourly) + ' 元）</p>'
     + '<p class="item">1、工作地點：' + e2(storeName) + '：' + e2(item.address) + '</p>'
-    + '<p class="item">2、原訂工作時間：民國 ' + (ro.y || '　') + ' 年 ' + (ro.m || '　') + ' 月 ' + (ro.d || '　') + ' 日 ' + oS[0] + ' 時 ' + oS[1] + ' 分至 ' + oE[0] + ' 時 ' + oE[1] + ' 分（休息 ' + e2(item.origBreak || '0') + ' 分鐘）。</p>'
-    + '<p class="item">3、調整工作時間：民國 ' + (ro.y || '　') + ' 年 ' + (ro.m || '　') + ' 月 ' + (ro.d || '　') + ' 日 ' + aS[0] + ' 時 ' + aS[1] + ' 分至 ' + aE[0] + ' 時 ' + aE[1] + ' 分（休息 ' + e2(item.adjBreak || '0') + ' 分鐘）。</p>'
+    + '<p class="item">2、原訂工作時間：民國 ' + (ro.y || '　') + ' 年 ' + (ro.m || '　') + ' 月 ' + (ro.d || '　') + ' 日 ' + oS[0] + ' 時 ' + oS[1] + ' 分至 ' + oEndPrefix + oE[0] + ' 時 ' + oE[1] + ' 分（休息 ' + e2(item.origBreak || '0') + ' 分鐘）。</p>'
+    + '<p class="item">3、調整工作時間：民國 ' + (ro.y || '　') + ' 年 ' + (ro.m || '　') + ' 月 ' + (ro.d || '　') + ' 日 ' + aS[0] + ' 時 ' + aS[1] + ' 分至 ' + aEndPrefix + aE[0] + ' 時 ' + aE[1] + ' 分（休息 ' + e2(item.adjBreak || '0') + ' 分鐘）。</p>'
     + '<p class="item">4、工作人員名字：' + e2(item.workerName) + '</p>'
     + '<p class="item">5、應給付薪資之總實際金額（含延長工時薪資以及扣除勞保自付額）：新臺幣 ' + (s.final > 0 ? s.final.toLocaleString() : '　　') + ' 元。</p>'
     + '<p>二、本公司確認以上資訊無誤，委由沃祈數位公司依雙方所簽署的「委託人力招募合作合約書」之約定，依以上資訊先代本公司支付該工作人員薪資後，本公司再依約定期限返還沃祈數位公司相關薪資總額。</p>'
