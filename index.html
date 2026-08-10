@@ -3073,9 +3073,10 @@ function clockStatus(startTime, endTime, actualIn, actualOut) {
   const ai = toMins(actualIn);
   let ao = toMins(actualOut);
   // 跨午夜排班修正：排班結束 <= 開始（含 00:00 結束），視為隔天
-  if (si !== null && so !== null && so <= si) so += 1440;
-  // 跨午夜打卡修正：排班跨日且下班打卡 <= 02:00，視為隔天打卡
-  if (so !== null && ao !== null && so >= 22*60 && ao <= 2*60) ao += 1440;
+  const crossMidnight = (si !== null && so !== null && so <= si);
+  if (crossMidnight) so += 1440;
+  // 跨午夜打卡修正：跨日班的下班打卡若讀到「凌晨」時刻（早於上班時間），視為隔天打卡
+  if (crossMidnight && ao !== null && ao < si) ao += 1440;
   const issues = [];
   if (!actualIn.trim()) issues.push('沒打卡');
   else if (si !== null && ai !== null && ai > si) issues.push('遲到 ' + extractTime(actualIn));
