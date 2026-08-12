@@ -3067,25 +3067,63 @@ function parseWorkDate(s) { const m = String(s).match(/(\d{4})\/(\d{2})\/(\d{2})
 function parseEndDate(s) { const m = String(s).match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/); return m ? new Date(`${m[1]}-${m[2]}-${m[3]}`) : null; }
 function extractTime(s) { const m = String(s||'').match(/(\d{1,2}:\d{2})/); return m ? m[1] : ''; }
 function toMins(s) { const m = String(s||'').match(/(\d{1,2}):(\d{2})/); return m ? +m[1]*60 + +m[2] : null; }
-function clockStatus(startTime, endTime, actualIn, actualOut) {
-  const si = toMins(startTime);
-  let so = toMins(endTime);
-  const ai = toMins(actualIn);
-  let ao = toMins(actualOut);
-  // 跨午夜排班修正：排班結束 <= 開始（含 00:00 結束），視為隔天
-  if (si !== null && so !== null && so <= si) so += 1440;
-  // 下班打卡跨日修正：打卡看似早退，但往後推一天剛好落在排班結束後 6 小時內 → 視為隔天打卡
-  // 同時涵蓋「跨午夜班打卡到凌晨」與「排班到 23:59 但打卡 00:00」兩種情況
-  if (so !== null && ao !== null && ao < so) {
-    const shifted = ao + 1440;
-    if (shifted >= so && shifted - so <= 6 * 60) ao = shifted;
-  }
+/* 解析「2026/08/11 18:00:00」為 Date；沒有日期只有時間則回 null */
+function toDateTime(s) {
+  const m = String(s||'').match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})[ T](\d{1,2}):(\d{2})/);
+  return m ? new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5]) : null;
+}
+/* 顯示用：「2026/08/08 22:07:25」→「08/08 22:07」 */
+function fmtStamp(s) {
+  const m = String(s||'').match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})[ T](\d{1,2}):(\d{2})/);
+  if (!m) return extractTime(s);
+  return String(m[2]).padStart(2,'0') + '/' + String(m[3]).padStart(2,'0') + ' '
+       + String(m[4]).padStart(2,'0') + ':' + m[5];
+}
+/* 打卡時間與排班相差超過此分鐘數 → 視為打卡資料異常（單班最長 12 小時，正常不可能差這麼多）*/
+const PUNCH_ANOMALY_MINS = 12 * 60;
+/*
+  startRaw / endRaw 為含日期的原始字串（如「2026/08/11 18:00:00」）。
+  有完整日期時間 → 直接用日期時間比對，跨日情形自然正確、不需猜測；
+  取不到日期（舊格式 CSV）→ 退回原本僅比對時間的邏輯，行為完全不變。
+*/
+function clockStatus(startTime, endTime, actualIn, actualOut, startRaw, endRaw) {
+  const hasIn  = String(actualIn  || '').trim() !== '';
+  const hasOut = String(actualOut || '').trim() !== '';
+  const S = toDateTime(startRaw), E = toDateTime(endRaw);
+  const I = toDateTime(actualIn), O = toDateTime(actualOut);
   const issues = [];
-  if (!actualIn.trim()) issues.push('沒打卡');
-  else if (si !== null && ai !== null && ai > si) issues.push('遲到 ' + extractTime(actualIn));
-  if (!actualOut.trim()) issues.push('沒打卡');
-  else if (so !== null && ao !== null && ao < so) issues.push('早退 ' + extractTime(actualOut));
-  else if (so !== null && ao !== null && (ao - so) >= 30) issues.push('疑似加班 ' + extractTime(actualOut));
+
+  /* ── 上班打卡 ── */
+  if (!hasIn) issues.push('沒打卡');
+  else if (S && I) {
+    const diff = (I - S) / 60000;                       // 正=晚於排班開始
+    if (Math.abs(diff) > PUNCH_ANOMALY_MINS) issues.push('打卡異常 ' + fmtStamp(actualIn));
+    else if (diff > 0) issues.push('遲到 ' + extractTime(actualIn));
+  } else {
+    const si = toMins(startTime), ai = toMins(actualIn);
+    if (si !== null && ai !== null && ai > si) issues.push('遲到 ' + extractTime(actualIn));
+  }
+
+  /* ── 下班打卡 ── */
+  if (!hasOut) issues.push('沒打卡');
+  else if (E && O) {
+    const diff = (O - E) / 60000;                       // 正=晚於排班結束
+    if (Math.abs(diff) > PUNCH_ANOMALY_MINS) issues.push('打卡異常 ' + fmtStamp(actualOut));
+    else if (diff < 0) issues.push('早退 ' + extractTime(actualOut));
+    else if (diff >= 30) issues.push('疑似加班 ' + extractTime(actualOut));
+  } else {
+    /* 舊格式退路：完整保留原本的跨日猜測邏輯 */
+    const si = toMins(startTime);
+    let so = toMins(endTime), ao = toMins(actualOut);
+    if (si !== null && so !== null && so <= si) so += 1440;
+    if (so !== null && ao !== null && ao < so) {
+      const shifted = ao + 1440;
+      if (shifted >= so && shifted - so <= 6 * 60) ao = shifted;
+    }
+    if (so !== null && ao !== null && ao < so) issues.push('早退 ' + extractTime(actualOut));
+    else if (so !== null && ao !== null && (ao - so) >= 30) issues.push('疑似加班 ' + extractTime(actualOut));
+  }
+
   const unique = [...new Set(issues)];
   return unique.length ? unique.join('、') : '無異常';
 }
@@ -3094,6 +3132,7 @@ function clockStatusHtml(status) {
   if (status === '無異常') return '<span class="chip green">無異常</span>';
   return status.split('、').map(s => {
     if (s.startsWith('沒打卡'))      return `<span class="chip pink">${esc(s)}</span>`;
+    if (s.startsWith('打卡異常'))    return `<span class="chip pink">${esc(s)}</span>`;
     if (s.startsWith('疑似加班'))    return `<span class="chip sky">${esc(s)}</span>`;
     return `<span class="chip amber">${esc(s)}</span>`;
   }).join(' ');
@@ -3611,6 +3650,8 @@ function renderReviews() {
       adjust:adjustCol?str(row[adjustCol]):'',
       startTime:startCol?extractTime(str(row[startCol])):'',
       endTime:extractTime(str(row[endCol])),
+      startRaw:startCol?str(row[startCol]):'',
+      endRaw:str(row[endCol]),
       actualIn:actualInCol?str(row[actualInCol]):'',
       actualOut:actualOutCol?str(row[actualOutCol]):''
     });
@@ -3666,7 +3707,7 @@ function renderReviews() {
         ? `<span style="color:var(--t2)">${esc(p.startTime)}</span><span style="color:var(--t3);padding:0 6px">~</span><span style="color:var(--t2)">${esc(p.endTime)}</span>`
         : '<span class="chip gray">無</span>';
       const ckHtml = hasPunchCols
-        ? clockStatusHtml(clockStatus(p.startTime, p.endTime, p.actualIn, p.actualOut))
+        ? clockStatusHtml(clockStatus(p.startTime, p.endTime, p.actualIn, p.actualOut, p.startRaw, p.endRaw))
         : '<span class="chip gray">無打卡資料</span>';
       return `<tr>
         <td class="chk-td"><input type="checkbox" ${st.reviewChecked.has(p._key)?'checked':''} onchange="toggleReviewCheck(${i})"></td>
