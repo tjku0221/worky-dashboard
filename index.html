@@ -4442,18 +4442,32 @@ function closeTweaks() {
 ══════════════════════════════════════════ */
 var CONFIRM_KEY = 'worky_confirm_v2';
 
+/* 今天的日期（YYYY-MM-DD，本地時區）。
+   🔴 不可用 toISOString()：那取的是 UTC 日期，台灣 UTC+8，
+   早上 8 點前開啟會少一天（簽署日期顯示成昨天）。*/
+function _cfTodayISO() {
+  var d = new Date();
+  return d.getFullYear() + '-'
+       + String(d.getMonth() + 1).padStart(2, '0') + '-'
+       + String(d.getDate()).padStart(2, '0');
+}
+
 var _cfTimesCleared = false;
 function _cfLoad() {
   try {
     var list = JSON.parse(localStorage.getItem(CONFIRM_KEY) || '[]');
     if (!_cfTimesCleared) {
-      var today = new Date().toISOString().slice(0, 10);
+      var today = _cfTodayISO();
       list.forEach(function(item) {
         item.origStart = ''; item.origEnd = '';
         item.adjStart  = ''; item.adjEnd  = '';
         item.signDate  = today;
       });
       _cfTimesCleared = true;
+      /* 🔴 必須寫回：否則清理只存在於這一次回傳的陣列，
+         之後切換分頁再呼叫 _cfLoad() 會因旗標已 true 而跳過清理，
+         從 localStorage 讀到舊的簽署日期與時間（只有第一份看起來正確）。*/
+      if (list.length) _cfSave(list);
     }
     return list;
   } catch(e) { return []; }
@@ -4463,7 +4477,7 @@ function _cfSave(list) {
   catch(e) { showAlert({ title: '儲存空間不足', body: '請刪除部分確認書或縮小附件圖片。', tone: 'warning' }); }
 }
 function _cfNewItem() {
-  var today = new Date().toISOString().slice(0, 10);
+  var today = _cfTodayISO();
   return {
     id: Date.now(),
     legalName: '', storeDisplay: '', address: '',
