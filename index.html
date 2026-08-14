@@ -2549,7 +2549,7 @@ const st = {
   merchants: [], apps: [], orders: [],
   activeTab: 'summary',
   f: { from: '', to: '' },
-  fc: { from: '', to: '' },
+  fc: { from: '', to: '', showRe: false },   // showRe：是否顯示「已重新媒合」的取消紀錄，預設隱藏
   cancelChecked: new Set(),
   _cancelGroups: [],
   checked: new Set(),
@@ -3193,10 +3193,12 @@ function render() {
     return true;
   }).length;
   const revCnt = computeReviewCount();
+  const cancelReIds = getCancelReMatchedIds();
   const cancelCnt = st.apps.filter(a => {
     if (!a._mine || str(a['狀態']).trim() !== '打工夥伴取消') return false;
     if (st.fc.from && a._workDate < st.fc.from) return false;
     if (st.fc.to   && a._workDate > st.fc.to)   return false;
+    if (!st.fc.showRe && cancelReIds.has(a._id)) return false;   // 已重新媒合的不計入待辦
     return true;
   }).length;
   const pendingPaySet = getPendingPayOrderSet();
@@ -3777,6 +3779,43 @@ function checkAllReviews(isChecked) {
 /* ═══════════════════════════════════════════════════════════════════════════
    Cancel tracking pane
    ─────────────────────────────────────────────────────────────────────────── */
+/* 取消追蹤：算出「取消之後又重新媒合成功」的申請 _id 集合。
+   判定同 renderCancel 的 Yes/No 欄：同一張工單編號若有狀態為「商家同意」
+   且商家同意時間晚於取消時間，代表這張單已經補上人了。
+   🔴 側欄計數與表格必須共用這一份，否則兩邊數字會對不起來。 */
+function getCancelReMatchedIds() {
+  const set = new Set();
+  if (!st.apps.length) return set;
+  const sample = st.apps[0];
+  const colKey = k => Object.keys(sample).find(h => h.includes(k)) || '';
+  const orderNumCol   = colKey('工單編號') || colKey('工單號碼') || colKey('工作單號碼') || colKey('工作編號');
+  const cancelTimeCol = Object.keys(sample).find(h => h.trim() === '打工夥伴取消') || colKey('取消時間');
+  const agreeTimeCol  = Object.keys(sample).find(h => h.trim() === '商家同意') || colKey('商家同意時間');
+  if (!orderNumCol || !cancelTimeCol || !agreeTimeCol) return set;
+
+  const reMatchMap = new Map();
+  st.apps.forEach(a => {
+    if (str(a['狀態']).trim() !== '商家同意') return;
+    const wn = str(a[orderNumCol] || '');
+    const t  = str(a[agreeTimeCol] || '');
+    if (!wn) return;
+    if (!reMatchMap.has(wn) || t > reMatchMap.get(wn)) reMatchMap.set(wn, t);
+  });
+  st.apps.forEach(a => {
+    if (str(a['狀態']).trim() !== '打工夥伴取消') return;
+    const wn = str(a[orderNumCol] || '');
+    const ct = str(a[cancelTimeCol] || '');
+    const rt = reMatchMap.get(wn);
+    if (rt && ct && rt > ct) set.add(a._id);
+  });
+  return set;
+}
+
+function toggleCancelReMatched() {
+  st.fc.showRe = !st.fc.showRe;
+  render();
+}
+
 function renderCancel() {
   const el = document.getElementById('pane-cancel');
   if (!st.merchants.length) { el.innerHTML = empty('cog', '尚未設定店鋪', '請先上傳店鋪設定資料'); return; }
@@ -3796,17 +3835,13 @@ function renderCancel() {
   let cancelled = st.apps.filter(a => a._mine && str(a['狀態']).trim() === '打工夥伴取消');
   if (st.fc.from) cancelled = cancelled.filter(a => a._workDate >= st.fc.from);
   if (st.fc.to)   cancelled = cancelled.filter(a => a._workDate <= st.fc.to);
-  cancelled.sort((a, b) => a._workDate.localeCompare(b._workDate));
 
-  // 工單號碼 → 最新「商家同意」時間 Map
-  const reMatchMap = new Map();
-  st.apps.forEach(a => {
-    if (str(a['狀態']).trim() !== '商家同意') return;
-    const wn = str(a[orderNumCol] || '');
-    const t  = str(a[agreeTimeCol] || '');
-    if (!wn) return;
-    if (!reMatchMap.has(wn) || t > reMatchMap.get(wn)) reMatchMap.set(wn, t);
-  });
+  // 已重新媒合成功的預設隱藏（切換鈕可叫回來）
+  const reIds = getCancelReMatchedIds();
+  const reHidden = cancelled.filter(a => reIds.has(a._id)).length;
+  if (!st.fc.showRe) cancelled = cancelled.filter(a => !reIds.has(a._id));
+
+  cancelled.sort((a, b) => a._workDate.localeCompare(b._workDate));
 
   // 依店鋪分組
   const groupMap = new Map();
@@ -3833,6 +3868,9 @@ function renderCancel() {
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <span>${st.fc.to ? esc(st.fc.to.replace(/-/g,' / ')) : '結束日期'}</span>
       </button>
+      <button type="button" class="btn compact" style="margin-left:10px" onclick="toggleCancelReMatched()">
+        ${st.fc.showRe ? '隱藏已重新媒合' : `顯示已重新媒合${reHidden ? ` (${reHidden})` : ''}`}
+      </button>
       <span class="f-summary">共 <b>${cancelled.length}</b> 筆 ／ <b>${groups.length}</b> 個店鋪</span>
     </div>`;
 
@@ -3846,14 +3884,11 @@ function renderCancel() {
       const cnt = ids.filter(id => st.cancelChecked.has(id)).length;
       const allChk = ids.length > 0 && cnt === ids.length;
       const dataRows = g.rows.map((a, ri) => {
-        const wn         = str(a[orderNumCol] || '');
         const login      = cleanId(str(a[loginCol] || ''));
         const name       = str(a[nameCol] || '-');
         const workTime   = str(a[workTimeCol] || '-');
         const cancelTime = str(a[cancelTimeCol] || '-');
-        const reMatchTime = reMatchMap.get(wn);
-        const isReMatched = reMatchTime && cancelTime && cancelTime !== '-' && reMatchTime > cancelTime;
-        const reMatchChip = isReMatched
+        const reMatchChip = reIds.has(a._id)
           ? '<span class="chip green chip-fixed">Yes</span>'
           : '<span class="chip gray chip-fixed">No</span>';
         return `<tr>
