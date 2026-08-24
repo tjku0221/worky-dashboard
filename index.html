@@ -4602,7 +4602,10 @@ function _cfFmtH(m) {
   if (!m) return '0H';
   return m % 60 === 0 ? (m / 60) + 'H' : (m / 60).toFixed(1) + 'H';
 }
-function _cfFmtMoney(n) { return Math.round(n).toLocaleString(); }
+function _cfFmtMoney(n) {
+  var r = Math.round(n * 100) / 100;
+  return r.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
 function _cfDisplayStore(item) {
   return item.storeDisplay || item.branch || item.legalName || '—';
 }
