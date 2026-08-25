@@ -4599,9 +4599,16 @@ function _cfRoc(iso) {
   var p = iso.split('-');
   return { y: String(parseInt(p[0]) - 1911), m: String(parseInt(p[1])), d: String(parseInt(p[2])) };
 }
+/* 分鐘 → 時數顯示。
+   🔴 不可用小數（原本 toFixed(1)）：332 分會顯示成「5.5H」，但金額其實是用
+      5.5333 小時算的 → 簡述變成「5.5H × 196 = 1,085 元」，而 5.5 × 196 = 1,078，
+      打工人員拿計算機一按就對不上，差 7 元（2026-08-25 實例）。
+      改用「幾小時幾分」，精度完整、也不會被誤讀成可直接相乘的小數。 */
 function _cfFmtH(m) {
-  if (!m) return '0H';
-  return m % 60 === 0 ? (m / 60) + 'H' : (m / 60).toFixed(1) + 'H';
+  if (!m) return '0小時';
+  var h = Math.floor(m / 60), r = m % 60;
+  if (r === 0) return h + '小時';
+  return (h > 0 ? h + '小時' : '') + r + '分';
 }
 function _cfFmtMoney(n) {
   var r = Math.round(n * 100) / 100;
