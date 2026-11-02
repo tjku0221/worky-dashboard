@@ -772,6 +772,17 @@ body::after {
     inset 0 -1px 0 rgba(0,0,0,0.5),
     0 0 14px rgba(74,222,128,0.25);
 }
+/* 已隱藏店鋪標示：冷色調藍紫，區隔桃紅（警示）／金（重點）／綠（完成） */
+.badge.indigo {
+  background: linear-gradient(180deg, #4b3fc4, #251c78);
+  color: #e4e7ff;
+  box-shadow:
+    inset 0 1px 0 rgba(200,205,255,0.30),
+    inset 0 -1px 0 rgba(0,0,0,0.5),
+    0 1px 0 rgba(0,0,0,0.4),
+    0 0 12px rgba(129,140,248,0.50);
+  cursor: help;
+}
 
 /* ── Table well (recessed) ─────────────────────────────────────────────── */
 .table-well {
@@ -2564,6 +2575,11 @@ const st = {
 
 // 申請總覽商家篩選：被隱藏的「公司|||分店」鍵
 function mKey(company, branch) { return company + '|||' + branch; }
+// 已在店鋪設定隱藏的店：申請總覽以外的分頁照常顯示，店名旁加標籤提醒
+function hiddenBadge(company, branch) {
+  if (!st.hiddenMerchants.has(mKey(company, branch))) return '';
+  return '<span class="badge indigo" title="此店鋪已在店鋪設定中隱藏（通常為商家自行媒合）">已隱藏</span>';
+}
 function loadHiddenMerchants() {
   try {
     const saved = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]');
@@ -3205,7 +3221,6 @@ function render() {
   const appOrderNumCol = getAppOrderNumCol();
   const pendingPayCnt = pendingPaySet.size ? st.apps.filter(a => {
     if (!a._mine || str(a['狀態']) !== '商家同意') return false;
-    if (st.hiddenMerchants.size && st.hiddenMerchants.has(mKey(a._company, a._branch))) return false;
     if (st.f.from && a._workDate < st.f.from) return false;
     if (st.f.to   && a._workDate > st.f.to)   return false;
     if (!appOrderNumCol) return false;
@@ -3480,7 +3495,6 @@ function renderPendingPay() {
   let data = pendingPaySet.size && appOrderNumCol
     ? st.apps.filter(a => a._mine && str(a['狀態']) === '商家同意' && pendingPaySet.has(cleanId(a[appOrderNumCol] || '')))
     : [];
-  if (st.hiddenMerchants.size) data = data.filter(a => !st.hiddenMerchants.has(mKey(a._company, a._branch)));
   if (st.f.from) data = data.filter(a => a._workDate>=st.f.from);
   if (st.f.to)   data = data.filter(a => a._workDate<=st.f.to);
   data.sort((a,b) => a._workDate.localeCompare(b._workDate));
@@ -3535,7 +3549,7 @@ function renderPendingPay() {
         <tr class="grp-head">
           <td class="chk-td"><input type="checkbox" data-gi="${gi}" ${allChk?'checked':''} onchange="checkAllPendingPayGroup(${gi},this.checked)"></td>
           <td colspan="5"><div class="grp-title-row">
-            <span class="grp-title">${esc(g.branch||g.company)}</span>${sub}
+            <span class="grp-title">${esc(g.branch||g.company)}</span>${sub}${hiddenBadge(g.company, g.branch)}
             <span class="badge">${g.rows.length} 筆</span>
           </div></td>
         </tr>
@@ -3725,7 +3739,7 @@ function renderReviews() {
       <tr class="grp-head">
         <td class="chk-td"><input type="checkbox" data-rgi="${gi}" ${grpAllChk?'checked':''} onchange="checkAllReviewGroup(${gi},this.checked)"></td>
         <td colspan="6"><div class="grp-title-row">
-          <span class="grp-title">${esc(g.branch||g.company)}</span>${sub}
+          <span class="grp-title">${esc(g.branch||g.company)}</span>${sub}${hiddenBadge(g.company, g.branch)}
           <span class="badge">${g.rows.length} 筆</span>
         </div></td>
       </tr>
@@ -3904,7 +3918,7 @@ function renderCancel() {
         <tr class="grp-head">
           <td class="chk-td"><input type="checkbox" data-cgi="${gi}" ${allChk?'checked':''} onchange="checkAllCancelGroup(${gi},this.checked)"></td>
           <td colspan="5"><div class="grp-title-row">
-            <span class="grp-title">${esc(g.branch || g.company)}</span>${sub}
+            <span class="grp-title">${esc(g.branch || g.company)}</span>${sub}${hiddenBadge(g.company, g.branch)}
             <span class="badge">${g.rows.length} 筆</span>
           </div></td>
         </tr>
@@ -4038,7 +4052,7 @@ function renderSettings() {
           <span title="${allHidden?'整間已隱藏，點擊全部顯示':'點擊隱藏整間公司'}" style="cursor:pointer;display:inline-flex;align-items:center" onclick="toggleCompanyVisible('${jsq(company)}')">${eyeIcon(!allHidden)}</span>
           <span class="grp-title">${esc(company)}</span>
           <span class="badge">${branches.length} 間</span>
-          ${hiddenCnt?`<span class="badge gray">已隱藏 ${hiddenCnt}</span>`:''}
+          ${hiddenCnt?`<span class="badge indigo">已隱藏 ${hiddenCnt}</span>`:''}
         </div></td>
       </tr>
       <tr>
